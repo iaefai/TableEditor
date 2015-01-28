@@ -1,0 +1,29 @@
+
+#datatable {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 1rem;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+#datatable td {
+    border: 1px solid black;
+    word-wrap: break-word;
+}
+
+#datatable th {
+    border: 2px solid black;
+    word-wrap: break-word;
+}
+
+#datatable td:empty, #datatable th:empty {
+    height: 1.4rem;
+    font-size: 1rem;
+
+}
+
+#datatable td.selected, #datatable th.selected {
+    background-color: #8AA3DD;
+}
