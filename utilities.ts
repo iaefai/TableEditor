@@ -1,36 +1,34 @@
-var Pair = (function() {
-    return function(x, y) {
-        this.x = x;
-        this.y = y;
-        
-        this.equals = function(other) {
-            return (this.x === other.x && this.y === other.y);
-        }
-    }
-})();
 
-var pairFromTarget = (function() {
-    return function(target) {
-        return new Pair(parseInt(target.dataset.left),
+class Point {
+    public constructor(
+        public x : number,
+        public y : number) {        
+    }
+
+    public equals(other : Point) : boolean {
+        return (this.x === other.x && this.y === other.y);
+    }
+
+    static fromTarget(target : any) : Point {
+        return new Point(parseInt(target.dataset.left),
                 parseInt(target.dataset.top));
     }
-})();
+}
 
-var Rect = (function() {
-    return function(p1, p2) {
-        if (p1 instanceof Pair && p2 instanceof Pair) {
-            this.p1 = p1;
-            this.p2 = p2;
-        } else {
-            throw "Rect can only be created with pairs";
-        }
+class Rect {
+    public constructor(
+        public p1 : Point,
+        public p2 : Point) {
     }
-})();
+}
 
-var DOM = (function() {
-    var self = {};
-
-    self.createTable = function(rows, cols, headrows, headcols) {
+module DOM {
+    export function createTable(
+        rows : number,
+        cols : number, 
+        headrows : number,
+        headcols : number) : HTMLTableElement {
+        
         var table = document.createElement("table");
         /*
          * rows -= headrows; cols -= headcols;
@@ -58,6 +56,5 @@ var DOM = (function() {
         }
 
         return table;
-    };
-    return self;
-})();
+    }
+}

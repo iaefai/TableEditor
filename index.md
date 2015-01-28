@@ -13,8 +13,5 @@ To use the table editor, clicking in a cell will select it, dragging from one ce
 <div class="table_div">
 </div>
 
-<script src="jwerty.js" type="application/ecmascript"></script>
-<script src="util.js" type="application/ecmascript"></script>
-<script src="table_support.js" type="application/ecmascript"></script>
-<script src="table.js" type="application/ecmascript"></script>
+<script src="mousetrap.min.js" type="application/ecmascript"></script>
 <script src="editor.js" type="application/ecmascript"></script>
