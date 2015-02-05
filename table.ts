@@ -1,18 +1,69 @@
 /// <reference path="mousetrap.d.ts"/>
 /// <reference path="utilities.ts"/>
 /// <reference path="table_grid.ts"/>
+/// <reference path="table_events.ts"/>
 
 class Table {
     private _a : Point = null;
     private _b : Point = null;
-    old_a = null;
-    old_b = null;
+    private old_a : Point = null;
+    private old_b : Point = null;
     private _state : number = 0;
-    __focus = false;
-    __position = new Point(0, 0);
-    private grid : TableGrid.Grid;
+    private _grid : TableGrid.Grid;
     private _table : HTMLTableElement;
+    private _events : TableEvents;
+    private _contextMenu : HTMLDivElement;
 
+    private updateContextMenu() {
+        /*if (this._contextMenu !== null) {
+            switch (this.state) {
+                case 2:
+                    this._contextMenu.textContent = "insert before, insert after, delete before, delete after";
+                    break;
+                case 4:
+                    this._contextMenu.textContent = "insert before, insert after, delete before, delete after, merge cells";
+                    break;
+                default:
+                    this._contextMenu.textContent = "Nothing to do";
+            }
+        }*/
+    }
+
+    private startEditing(cell : Point) {
+        var element = this.grid.get(cell);
+        var div = <HTMLDivElement>element.querySelector("span");
+        div.contentEditable = "true";
+        div.focus();
+    }
+
+    private stopEditing(cell : Point) {
+        var element = this.grid.get(cell);
+        var div = <HTMLDivElement>element.querySelector("span");
+        div.contentEditable = "false";
+        div.blur();
+    }
+
+    private clearCell(cell : Point) {
+        var element = this.grid.get(cell);
+        var div = <HTMLDivElement>element.querySelector("span");
+        div.textContent = "";
+    }
+
+    private select(cell : Point) {
+
+    }
+
+    get tableElement() : HTMLTableElement {
+        return this._table;
+    }
+
+    get grid() : TableGrid.Grid {
+        return this._grid;
+    }
+
+    set grid(value : TableGrid.Grid) {
+        this._grid = value;
+    }
 
     get a() : Point {
         return this._a;
@@ -65,6 +116,7 @@ class Table {
     set state(value : number) {
         this.onStateChange(this._state, value);
         this._state = value;
+        this.updateContextMenu();
     }
 
     get b() : Point {
@@ -127,294 +179,23 @@ class Table {
         this._table.id = "datatable";
 
         if (parent !== null) {
+            this._contextMenu = document.createElement("div");
+            this._contextMenu.classList.add("contextmenu");
+
+            parent.appendChild(this._contextMenu);
             parent.appendChild(this._table);
+        } else {
+            this._contextMenu = null;
         }
+
 
         this.grid = new TableGrid.Grid(this._table);
 
-        // mousedown in table
-        this._table.addEventListener("mousedown", e => {
-            switch (this.state) {
-                case 0:
-                    this.a = Point.fromTarget(e.target);
-                    this.state = 1;
-                    break;
-                case 2:
-                    if (e.target === this.grid.get(this.a)) {
-                        this.state = 6;
-                    } else {
-                        this.a = Point.fromTarget(e.target);
-                        this.state = 1;
-                    }
-                    break;
-                case 4:
-                        this.b = null;
-                        this.a = Point.fromTarget(e.target);
+        this._events = new TableEvents(this);
 
-                        this.state = 1;
-                    break;
-                case 5:
-                    if (e.target !== this.grid.get(this.a)) {
-                        this.a = Point.fromTarget(e.target);
-                        this.state = 1;
-                    }
-                }
-                e.stopPropagation();
- 
-        });
         
-        this._table.addEventListener("mousemove", e => {
-            switch (this.state) {
-            case 6:
-                this.state = 1;
-            }
-        });
-
-        // off table listener
-        document.addEventListener("mousedown",
-            e => {
-                    switch (this.state) {
-                    case 0:
-                    case 2:
-                    case 4:
-                    case 5:
-                        this.state = 0;
-                    }
-                });
-
-        this._table.addEventListener("mouseup", e => {
-            switch (this.state) {
-            case 1:
-                this.state = 2;
-                break;
-            case 3:
-                this.state = 4;
-                break;
-            case 6:
-                this.state = 5;
-                break;
-                
-            }
-            e.stopPropagation();
-        });
         
-        this._table.addEventListener("mouseout", e => {
-            switch (this.state) {
-            case 1:         
-                var t = Point.fromTarget(e.target);
-                
-                console.log("mouseOut: target(" + t.x + ", " + t.y + ") a(" + this.a.x + ", " + this.a.y + ")" );
-                console.log(Point.fromTarget(e.target).equals(this.a));
-//                if (e.target === this.grid.get(this.a)) {
-                if (Point.fromTarget(e.target).equals(this.a)) {
-                    this.b = Point.fromTarget(e.relatedTarget);
-                    this.state = 3;
-                }
-            }
-            e.stopPropagation();
-        });
         
-        this._table.addEventListener("mouseover", e => {
-            switch (this.state) {
-            case 3:
-                if (e.target == this.grid.get(this.a)) {
-                    this.b = null;
-                    this.state = 1;
-                } else {
-                    if (e.target === null) {
-                        // might have moved off the table
-                    }
-                    this.b = Point.fromTarget(e.target);
-                }
-            }
-            e.stopPropagation();
-        });
-
-        document.addEventListener("keypress", e => {
-            switch (this.state) {
-            case 2:
-//                var charCode = (typeof e.which == "number") ? e.which : e.keyCode;
-//                this.grid.get(this.a).textContent = String.fromCharCode(charCode);
-                this.state = 5;
-            }
-        });
-        
-        Mousetrap.bind("esc", e => {
-            switch (this.state) {
-            case 5:
-                console.log("escape!");
-                this.state = 2;
-                return false;
-            }
-        });
-        
-        Mousetrap.bind("tab", e => {
-            switch (this.state) {
-            case 5:
-                this.state = 2;
-                this.a = new Point(this.a.x+1, this.a.y);
-                return false;
-            }
-        });
-        
-        Mousetrap.bind("enter", e => {
-            switch (this.state) {
-            case 5:
-                this.state = 2;
-                this.a = new Point(this.a.x, this.a.y+1);               
-                return false;
-            }
-        });
-        
-        var __this = this;
-
-        Mousetrap.bind("left", e => {
-            
-            
-            switch (this.state) {
-            case 4:
-                this.b = null;
-                this.state = 2; // and drop down into case 2
-            case 2:
-                this.a = new Point(this.a.x-1, this.a.y);
-                return false;
-            }
-            
-            return true;
-        });
-        
-        Mousetrap.bind("up", e => {
-            
-
-            switch (this.state) {
-            case 4:
-                this.b = null;
-                this.state = 2; // and drop down into case 2
-            case 2:
-                this.a = new Point(this.a.x, this.a.y-1);
-                return false;
-            }
-            
-            return true;
-        });
-        
-        Mousetrap.bind("down", e => {
-            
-            switch (this.state) {
-            case 4:
-                this.b = null;
-                this.state = 2; // and drop down into case 2
-            case 2:
-                this.a = new Point(this.a.x, this.a.y+1);
-                return false;
-            }
-            
-            return true;
-        });
-        
-        Mousetrap.bind("right", e => {
-            
-            switch (this.state) {
-            case 4:
-                this.b = null;
-                this.state = 2; // and drop down into case 2
-            case 2:
-                this.a = new Point(this.a.x+1, this.a.y);
-                return false;
-            }
-            
-            return true;
-        });
-        
-        Mousetrap.bind("shift+left", e => {
-            
-            switch (this.state) {
-            case 2:
-                this.b = new Point(this.a.x-1, this.a.y);
-                this.state = 4;
-                return false;
-            case 4:
-                this.b = new Point(this.b.x-1, this.b.y);
-                if (this.b.equals(this.a)) {
-                    this.b = null;
-                    this.state = 2;
-                }
-                return false;
-            }
-            
-            return true;
-        });
-        
-        Mousetrap.bind("shift+up", e => {
-            
-            switch (this.state) {
-            case 2:
-                this.b = new Point(this.a.x, this.a.y-1);
-                this.state = 4;
-                return false;
-            case 4:
-                this.b = new Point(this.b.x, this.b.y-1);
-                if (this.b.equals(this.a)) {
-                    this.b = null;
-                    this.state = 2;
-                }
-                return false;
-            }
-            
-            return true;
-        });
-        
-        Mousetrap.bind("shift+down", e => {
-            
-            switch (this.state) {
-            case 2:
-                this.b = new Point(this.a.x, this.a.y+1);
-                this.state = 4;
-                return false;
-            case 4:
-                this.b = new Point(this.b.x, this.b.y+1);
-                if (this.b.equals(this.a)) {
-                    this.b = null;
-                    this.state = 2;
-                }
-                return false;
-            }
-            
-            return true;
-        });
-        
-        Mousetrap.bind("shift+right", e => {
-            
-            switch (this.state) {
-            case 2:
-                this.b = new Point(this.a.x+1, this.a.y);
-                this.state = 4;
-                return false;
-            case 4:
-                this.b = new Point(this.b.x+1, this.b.y);
-                if (this.b.equals(this.a)) {
-                    this.b = null;
-                    this.state = 2;
-                }
-                return false;
-            }
-            
-            return true;
-        });
-        
-        Mousetrap.bind(["delete", "backspace"], e => {
-            switch (this.state) {
-            case 2:
-                this.grid.get(this.a).textContent = "";
-                return false;
-            case 4:
-                var cells = this._table.querySelectorAll(".selected");
-                for (var i = 0; i < cells.length; ++i) {
-                    cells.item(i).textContent = "";
-                }
-                return false;
-            }
-        });
     }
 
     public onStateChange(from : number, to : number) : void {
@@ -422,6 +203,18 @@ class Table {
             this._table.classList.add("selected");
 //            this.grid.get(this.a).classList.add("selected");
             return;
+        }
+
+        if (to === 3) {
+            var body = document.getElementsByTagName("body").item(0);
+            body.classList.add("noselect");
+            body.addEventListener("mouseup", this._events.mouseUpEvent);
+        }
+
+        if (from === 3) {
+            var body = document.getElementsByTagName("body").item(0);
+            body.classList.remove("noselect");
+            body.removeEventListener("mouseup", this._events.mouseUpEvent);
         }
 
         if (from === 1 && to === 2) {
@@ -439,28 +232,20 @@ class Table {
         }
         
         if (from === 6 && to === 5) {
-            var element = this.grid.get(this.a);
-            element.contentEditable = "true";
-            element.focus();
+            this.startEditing(this.a);
         }
         
         if (from === 2 && to === 5) {
-            var element = this.grid.get(this.a);
-            element.textContent = "";
-            element.contentEditable = "true";
-            element.focus();
+            this.clearCell(this.a);
+            this.startEditing(this.a);
         }
         
         if (from === 5 && to === 2) {
-            var element = this.grid.get(this.a);
-            element.contentEditable = "false";
-            element.blur();
+            this.stopEditing(this.a);
         }
         
         if (from === 5 && to === 1) {
-            var element = this.grid.get(this.old_a);
-            element.contentEditable = "false";
-            element.blur();
+            this.stopEditing(this.old_a);
         }
 
         if (to === 0) {

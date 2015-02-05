@@ -7,7 +7,17 @@ var Point = (function () {
         return (this.x === other.x && this.y === other.y);
     };
     Point.fromTarget = function (target) {
-        return new Point(parseInt(target.dataset.left), parseInt(target.dataset.top));
+        var element;
+        if (target instanceof HTMLSpanElement) {
+            element = target.parentElement;
+        }
+        else if (target instanceof HTMLTableCellElement) {
+            element = target;
+        }
+        else {
+            throw "Point::fromTarget: Not a Div or TableCell";
+        }
+        return new Point(parseInt(element.dataset["left"]), parseInt(element.dataset["top"]));
     };
     return Point;
 })();
@@ -26,6 +36,8 @@ var DOM;
             var row = document.createElement("tr");
             for (var j = 0; j < cols + headcols; ++j) {
                 var col = document.createElement("th");
+                var div = document.createElement("span");
+                col.appendChild(div);
                 row.appendChild(col);
             }
             table.appendChild(row);
@@ -34,10 +46,14 @@ var DOM;
             var row = document.createElement("tr");
             for (var j = 0; j < headcols; ++j) {
                 var col = document.createElement("th");
+                var div = document.createElement("span");
+                col.appendChild(div);
                 row.appendChild(col);
             }
             for (var j = 0; j < cols; ++j) {
                 var col = document.createElement("td");
+                var div = document.createElement("span");
+                col.appendChild(div);
                 row.appendChild(col);
             }
             table.appendChild(row);
@@ -176,261 +192,248 @@ var TableGrid;
     })();
     TableGrid.Grid = Grid;
 })(TableGrid || (TableGrid = {}));
-/// <reference path="mousetrap.d.ts"/>
-/// <reference path="utilities.ts"/>
-/// <reference path="table_grid.ts"/>
-var Table = (function () {
-    function Table(parent, rows, cols, headrows, headcols) {
+/// <references path="table.ts"/>
+var TableEvents = (function () {
+    function TableEvents(table) {
         var _this = this;
-        this._a = null;
-        this._b = null;
-        this.old_a = null;
-        this.old_b = null;
-        this._state = 0;
-        this.__focus = false;
-        this.__position = new Point(0, 0);
-        this._table = DOM.createTable(rows, cols, headrows, headcols);
-        this._table.id = "datatable";
-        if (parent !== null) {
-            parent.appendChild(this._table);
-        }
-        this.grid = new TableGrid.Grid(this._table);
+        this.table = table;
         // mousedown in table
-        this._table.addEventListener("mousedown", function (e) {
-            switch (_this.state) {
+        this.table.tableElement.addEventListener("mousedown", function (e) {
+            switch (_this.table.state) {
                 case 0:
-                    _this.a = Point.fromTarget(e.target);
-                    _this.state = 1;
+                    _this.table.a = Point.fromTarget(e.target);
+                    _this.table.state = 1;
                     break;
                 case 2:
-                    if (e.target === _this.grid.get(_this.a)) {
-                        _this.state = 6;
+                    if (e.target === _this.table.grid.get(_this.table.a)) {
+                        _this.table.state = 6;
                     }
                     else {
-                        _this.a = Point.fromTarget(e.target);
-                        _this.state = 1;
+                        _this.table.a = Point.fromTarget(e.target);
+                        _this.table.state = 1;
                     }
                     break;
                 case 4:
-                    _this.b = null;
-                    _this.a = Point.fromTarget(e.target);
-                    _this.state = 1;
+                    _this.table.b = null;
+                    _this.table.a = Point.fromTarget(e.target);
+                    _this.table.state = 1;
                     break;
                 case 5:
-                    if (e.target !== _this.grid.get(_this.a)) {
-                        _this.a = Point.fromTarget(e.target);
-                        _this.state = 1;
+                    if (e.target !== _this.table.grid.get(_this.table.a)) {
+                        _this.table.a = Point.fromTarget(e.target);
+                        _this.table.state = 1;
                     }
             }
             e.stopPropagation();
         });
-        this._table.addEventListener("mousemove", function (e) {
-            switch (_this.state) {
+        this.table.tableElement.addEventListener("mousemove", function (e) {
+            switch (_this.table.state) {
                 case 6:
-                    _this.state = 1;
+                    _this.table.state = 1;
             }
         });
         // off table listener
         document.addEventListener("mousedown", function (e) {
-            switch (_this.state) {
+            switch (_this.table.state) {
                 case 0:
                 case 2:
                 case 4:
                 case 5:
-                    _this.state = 0;
+                    _this.table.state = 0;
             }
         });
-        this._table.addEventListener("mouseup", function (e) {
-            switch (_this.state) {
+        this.mouseUpEvent = function (e) {
+            switch (_this.table.state) {
                 case 1:
-                    _this.state = 2;
+                    _this.table.state = 2;
                     break;
                 case 3:
-                    _this.state = 4;
+                    _this.table.state = 4;
                     break;
                 case 6:
-                    _this.state = 5;
+                    _this.table.state = 5;
                     break;
             }
             e.stopPropagation();
-        });
-        this._table.addEventListener("mouseout", function (e) {
-            switch (_this.state) {
+        };
+        this.table.tableElement.addEventListener("mouseup", this.mouseUpEvent);
+        this.table.tableElement.addEventListener("mouseout", function (e) {
+            switch (_this.table.state) {
                 case 1:
                     var t = Point.fromTarget(e.target);
-                    console.log("mouseOut: target(" + t.x + ", " + t.y + ") a(" + _this.a.x + ", " + _this.a.y + ")");
-                    console.log(Point.fromTarget(e.target).equals(_this.a));
-                    //                if (e.target === this.grid.get(this.a)) {
-                    if (Point.fromTarget(e.target).equals(_this.a)) {
-                        _this.b = Point.fromTarget(e.relatedTarget);
-                        _this.state = 3;
+                    console.log("mouseOut: target(" + t.x + ", " + t.y + ") a(" + _this.table.a.x + ", " + _this.table.a.y + ")");
+                    console.log(Point.fromTarget(e.target).equals(_this.table.a));
+                    //                if (e.target === this.table.grid.get(this.table.a)) {
+                    if (Point.fromTarget(e.target).equals(_this.table.a)) {
+                        _this.table.b = Point.fromTarget(e.relatedTarget);
+                        _this.table.state = 3;
                     }
             }
             e.stopPropagation();
         });
-        this._table.addEventListener("mouseover", function (e) {
-            switch (_this.state) {
+        this.table.tableElement.addEventListener("mouseover", function (e) {
+            switch (_this.table.state) {
                 case 3:
-                    if (e.target == _this.grid.get(_this.a)) {
-                        _this.b = null;
-                        _this.state = 1;
+                    if (e.target == _this.table.grid.get(_this.table.a)) {
+                        _this.table.b = null;
+                        _this.table.state = 1;
                     }
                     else {
                         if (e.target === null) {
                         }
-                        _this.b = Point.fromTarget(e.target);
+                        _this.table.b = Point.fromTarget(e.target);
                     }
             }
             e.stopPropagation();
         });
         document.addEventListener("keypress", function (e) {
-            switch (_this.state) {
+            switch (_this.table.state) {
                 case 2:
                     //                var charCode = (typeof e.which == "number") ? e.which : e.keyCode;
-                    //                this.grid.get(this.a).textContent = String.fromCharCode(charCode);
-                    _this.state = 5;
+                    //                this.table.grid.get(this.table.a).textContent = String.fromCharCode(charCode);
+                    _this.table.state = 5;
             }
         });
         Mousetrap.bind("esc", function (e) {
-            switch (_this.state) {
+            switch (_this.table.state) {
                 case 5:
                     console.log("escape!");
-                    _this.state = 2;
+                    _this.table.state = 2;
                     return false;
             }
         });
         Mousetrap.bind("tab", function (e) {
-            switch (_this.state) {
+            switch (_this.table.state) {
                 case 5:
-                    _this.state = 2;
-                    _this.a = new Point(_this.a.x + 1, _this.a.y);
+                    _this.table.state = 2;
+                    _this.table.a = new Point(_this.table.a.x + 1, _this.table.a.y);
                     return false;
             }
         });
         Mousetrap.bind("enter", function (e) {
-            switch (_this.state) {
+            switch (_this.table.state) {
                 case 5:
-                    _this.state = 2;
-                    _this.a = new Point(_this.a.x, _this.a.y + 1);
+                    _this.table.state = 2;
+                    _this.table.a = new Point(_this.table.a.x, _this.table.a.y + 1);
                     return false;
             }
         });
         var __this = this;
         Mousetrap.bind("left", function (e) {
-            switch (_this.state) {
+            switch (_this.table.state) {
                 case 4:
-                    _this.b = null;
-                    _this.state = 2;
+                    _this.table.b = null;
+                    _this.table.state = 2;
                 case 2:
-                    _this.a = new Point(_this.a.x - 1, _this.a.y);
+                    _this.table.a = new Point(_this.table.a.x - 1, _this.table.a.y);
                     return false;
             }
             return true;
         });
         Mousetrap.bind("up", function (e) {
-            switch (_this.state) {
+            switch (_this.table.state) {
                 case 4:
-                    _this.b = null;
-                    _this.state = 2;
+                    _this.table.b = null;
+                    _this.table.state = 2;
                 case 2:
-                    _this.a = new Point(_this.a.x, _this.a.y - 1);
+                    _this.table.a = new Point(_this.table.a.x, _this.table.a.y - 1);
                     return false;
             }
             return true;
         });
         Mousetrap.bind("down", function (e) {
-            switch (_this.state) {
+            switch (_this.table.state) {
                 case 4:
-                    _this.b = null;
-                    _this.state = 2;
+                    _this.table.b = null;
+                    _this.table.state = 2;
                 case 2:
-                    _this.a = new Point(_this.a.x, _this.a.y + 1);
+                    _this.table.a = new Point(_this.table.a.x, _this.table.a.y + 1);
                     return false;
             }
             return true;
         });
         Mousetrap.bind("right", function (e) {
-            switch (_this.state) {
+            switch (_this.table.state) {
                 case 4:
-                    _this.b = null;
-                    _this.state = 2;
+                    _this.table.b = null;
+                    _this.table.state = 2;
                 case 2:
-                    _this.a = new Point(_this.a.x + 1, _this.a.y);
+                    _this.table.a = new Point(_this.table.a.x + 1, _this.table.a.y);
                     return false;
             }
             return true;
         });
         Mousetrap.bind("shift+left", function (e) {
-            switch (_this.state) {
+            switch (_this.table.state) {
                 case 2:
-                    _this.b = new Point(_this.a.x - 1, _this.a.y);
-                    _this.state = 4;
+                    _this.table.b = new Point(_this.table.a.x - 1, _this.table.a.y);
+                    _this.table.state = 4;
                     return false;
                 case 4:
-                    _this.b = new Point(_this.b.x - 1, _this.b.y);
-                    if (_this.b.equals(_this.a)) {
-                        _this.b = null;
-                        _this.state = 2;
+                    _this.table.b = new Point(_this.table.b.x - 1, _this.table.b.y);
+                    if (_this.table.b.equals(_this.table.a)) {
+                        _this.table.b = null;
+                        _this.table.state = 2;
                     }
                     return false;
             }
             return true;
         });
         Mousetrap.bind("shift+up", function (e) {
-            switch (_this.state) {
+            switch (_this.table.state) {
                 case 2:
-                    _this.b = new Point(_this.a.x, _this.a.y - 1);
-                    _this.state = 4;
+                    _this.table.b = new Point(_this.table.a.x, _this.table.a.y - 1);
+                    _this.table.state = 4;
                     return false;
                 case 4:
-                    _this.b = new Point(_this.b.x, _this.b.y - 1);
-                    if (_this.b.equals(_this.a)) {
-                        _this.b = null;
-                        _this.state = 2;
+                    _this.table.b = new Point(_this.table.b.x, _this.table.b.y - 1);
+                    if (_this.table.b.equals(_this.table.a)) {
+                        _this.table.b = null;
+                        _this.table.state = 2;
                     }
                     return false;
             }
             return true;
         });
         Mousetrap.bind("shift+down", function (e) {
-            switch (_this.state) {
+            switch (_this.table.state) {
                 case 2:
-                    _this.b = new Point(_this.a.x, _this.a.y + 1);
-                    _this.state = 4;
+                    _this.table.b = new Point(_this.table.a.x, _this.table.a.y + 1);
+                    _this.table.state = 4;
                     return false;
                 case 4:
-                    _this.b = new Point(_this.b.x, _this.b.y + 1);
-                    if (_this.b.equals(_this.a)) {
-                        _this.b = null;
-                        _this.state = 2;
+                    _this.table.b = new Point(_this.table.b.x, _this.table.b.y + 1);
+                    if (_this.table.b.equals(_this.table.a)) {
+                        _this.table.b = null;
+                        _this.table.state = 2;
                     }
                     return false;
             }
             return true;
         });
         Mousetrap.bind("shift+right", function (e) {
-            switch (_this.state) {
+            switch (_this.table.state) {
                 case 2:
-                    _this.b = new Point(_this.a.x + 1, _this.a.y);
-                    _this.state = 4;
+                    _this.table.b = new Point(_this.table.a.x + 1, _this.table.a.y);
+                    _this.table.state = 4;
                     return false;
                 case 4:
-                    _this.b = new Point(_this.b.x + 1, _this.b.y);
-                    if (_this.b.equals(_this.a)) {
-                        _this.b = null;
-                        _this.state = 2;
+                    _this.table.b = new Point(_this.table.b.x + 1, _this.table.b.y);
+                    if (_this.table.b.equals(_this.table.a)) {
+                        _this.table.b = null;
+                        _this.table.state = 2;
                     }
                     return false;
             }
             return true;
         });
         Mousetrap.bind(["delete", "backspace"], function (e) {
-            switch (_this.state) {
+            switch (_this.table.state) {
                 case 2:
-                    _this.grid.get(_this.a).textContent = "";
+                    _this.table.grid.get(_this.table.a).textContent = "";
                     return false;
                 case 4:
-                    var cells = _this._table.querySelectorAll(".selected");
+                    var cells = _this.table.tableElement.querySelectorAll(".selected");
                     for (var i = 0; i < cells.length; ++i) {
                         cells.item(i).textContent = "";
                     }
@@ -438,6 +441,85 @@ var Table = (function () {
             }
         });
     }
+    TableEvents.prototype.registerEditingEvents = function (div) {
+    };
+    return TableEvents;
+})();
+/// <reference path="mousetrap.d.ts"/>
+/// <reference path="utilities.ts"/>
+/// <reference path="table_grid.ts"/>
+/// <reference path="table_events.ts"/>
+var Table = (function () {
+    function Table(parent, rows, cols, headrows, headcols) {
+        this._a = null;
+        this._b = null;
+        this.old_a = null;
+        this.old_b = null;
+        this._state = 0;
+        this._table = DOM.createTable(rows, cols, headrows, headcols);
+        this._table.id = "datatable";
+        if (parent !== null) {
+            this._contextMenu = document.createElement("div");
+            this._contextMenu.classList.add("contextmenu");
+            parent.appendChild(this._contextMenu);
+            parent.appendChild(this._table);
+        }
+        else {
+            this._contextMenu = null;
+        }
+        this.grid = new TableGrid.Grid(this._table);
+        this._events = new TableEvents(this);
+    }
+    Table.prototype.updateContextMenu = function () {
+        /*if (this._contextMenu !== null) {
+            switch (this.state) {
+                case 2:
+                    this._contextMenu.textContent = "insert before, insert after, delete before, delete after";
+                    break;
+                case 4:
+                    this._contextMenu.textContent = "insert before, insert after, delete before, delete after, merge cells";
+                    break;
+                default:
+                    this._contextMenu.textContent = "Nothing to do";
+            }
+        }*/
+    };
+    Table.prototype.startEditing = function (cell) {
+        var element = this.grid.get(cell);
+        var div = element.querySelector("span");
+        div.contentEditable = "true";
+        div.focus();
+    };
+    Table.prototype.stopEditing = function (cell) {
+        var element = this.grid.get(cell);
+        var div = element.querySelector("span");
+        div.contentEditable = "false";
+        div.blur();
+    };
+    Table.prototype.clearCell = function (cell) {
+        var element = this.grid.get(cell);
+        var div = element.querySelector("span");
+        div.textContent = "";
+    };
+    Table.prototype.select = function (cell) {
+    };
+    Object.defineProperty(Table.prototype, "tableElement", {
+        get: function () {
+            return this._table;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Table.prototype, "grid", {
+        get: function () {
+            return this._grid;
+        },
+        set: function (value) {
+            this._grid = value;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(Table.prototype, "a", {
         get: function () {
             return this._a;
@@ -482,6 +564,7 @@ var Table = (function () {
         set: function (value) {
             this.onStateChange(this._state, value);
             this._state = value;
+            this.updateContextMenu();
         },
         enumerable: true,
         configurable: true
@@ -537,6 +620,16 @@ var Table = (function () {
             //            this.grid.get(this.a).classList.add("selected");
             return;
         }
+        if (to === 3) {
+            var body = document.getElementsByTagName("body").item(0);
+            body.classList.add("noselect");
+            body.addEventListener("mouseup", this._events.mouseUpEvent);
+        }
+        if (from === 3) {
+            var body = document.getElementsByTagName("body").item(0);
+            body.classList.remove("noselect");
+            body.removeEventListener("mouseup", this._events.mouseUpEvent);
+        }
         if (from === 1 && to === 2) {
             // nothing to do, because 1 already selected a
             return;
@@ -546,25 +639,17 @@ var Table = (function () {
         if (from === 2 && to === 6) {
         }
         if (from === 6 && to === 5) {
-            var element = this.grid.get(this.a);
-            element.contentEditable = "true";
-            element.focus();
+            this.startEditing(this.a);
         }
         if (from === 2 && to === 5) {
-            var element = this.grid.get(this.a);
-            element.textContent = "";
-            element.contentEditable = "true";
-            element.focus();
+            this.clearCell(this.a);
+            this.startEditing(this.a);
         }
         if (from === 5 && to === 2) {
-            var element = this.grid.get(this.a);
-            element.contentEditable = "false";
-            element.blur();
+            this.stopEditing(this.a);
         }
         if (from === 5 && to === 1) {
-            var element = this.grid.get(this.old_a);
-            element.contentEditable = "false";
-            element.blur();
+            this.stopEditing(this.old_a);
         }
         if (to === 0) {
             this.a = null;

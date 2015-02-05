@@ -47,7 +47,6 @@ module TableGrid {
         for (var row = smallestIndex(accumulator); !(row === 0 && emptyTable(
                 table, indexes)); row = smallestIndex(accumulator)) {
 
-
             var cell = <HTMLTableCellElement> (<HTMLTableRowElement>table.rows.item(row)).cells.item(indexes[row]);
             indexes[row]++;
 

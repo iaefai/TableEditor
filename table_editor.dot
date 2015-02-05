@@ -1,0 +1,48 @@
+digraph TableEditor {
+	bgcolor=transparent;
+	zero [shape=circle, peripheries=2, label="0"];
+	one [label="1"];
+	two [label="2"];
+	three [label="3"];
+	four [label="4"];
+	five [label="5"];
+	six [label="6"];
+
+	zero -> one [label="down"];
+	one -> two [label="up"];
+	one -> three [label="α out"];
+	one -> one [label="α move"];
+	two -> one [label="down !α"];
+	two -> zero [label="down off table"];
+	two -> two [label="delete, arrows"];
+	two -> six [label="down α"];
+	three -> one [label="α in"];
+	three -> four [label="up"];
+	four -> one [label="down in table"];
+	four -> zero [label="down off table"];
+	four -> four [label="shift+arrows"];
+	four -> two [label="arrows, delete"];
+	two -> four [label="shift+arrows"];
+	two -> five [label="typing"];
+	six -> five [label="up"];
+	six -> one [label="any movement"];
+	five -> one [label="down !α"];
+	five -> five [label="down α"];
+	five -> zero [label="down off table"];
+
+	{ rank = sink;
+		Legend [shape=none, margin=0, label=<
+			<table border="1" cellborder="0">
+				<tr><td colspan="2">Legend</td></tr>
+				<tr><td>State</td><td>Purpose</td></tr>
+				<tr><td>0</td><td>No focus on table</td></tr>
+				<tr><td>1</td><td>Selection start (α = start cell)</td></tr>
+				<tr><td>2</td><td>Cell focus (one cell)</td></tr>
+				<tr><td>3</td><td>Multiselection in progress</td></tr>
+				<tr><td>4</td><td>Multiple selections (β = other corner)</td></tr>
+				<tr><td>5</td><td>Edit Cell</td></tr>
+				<tr><td>6</td><td>Might edit</td></tr>
+			</table>
+		>];
+	}
+}

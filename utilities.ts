@@ -9,9 +9,19 @@ class Point {
         return (this.x === other.x && this.y === other.y);
     }
 
-    static fromTarget(target : any) : Point {
-        return new Point(parseInt(target.dataset.left),
-                parseInt(target.dataset.top));
+    static fromTarget(target : EventTarget) : Point {
+        var element : HTMLTableCellElement;
+
+        if (target instanceof HTMLSpanElement) {
+            element = <HTMLTableCellElement>(<HTMLDivElement>target).parentElement;
+        } else if (target instanceof HTMLTableCellElement) {
+            element = <HTMLTableCellElement>target;
+        } else {
+            throw "Point::fromTarget: Not a Div or TableCell";
+        }
+
+        return new Point(parseInt(element.dataset["left"]),
+                parseInt(element.dataset["top"]));
     }
 }
 
@@ -37,6 +47,8 @@ module DOM {
             var row = document.createElement("tr");
             for (var j = 0; j < cols + headcols; ++j) {
                 var col = document.createElement("th");
+                var div = document.createElement("span");
+                col.appendChild(div);
                 row.appendChild(col);
             }
             table.appendChild(row);
@@ -46,10 +58,14 @@ module DOM {
             var row = document.createElement("tr");
             for (var j = 0; j < headcols; ++j) {
                 var col = document.createElement("th");
+                var div = document.createElement("span");
+                col.appendChild(div);
                 row.appendChild(col);
             }
             for (var j = 0; j < cols; ++j) {
                 var col = document.createElement("td");
+                var div = document.createElement("span");
+                col.appendChild(div);
                 row.appendChild(col);
             }
             table.appendChild(row);

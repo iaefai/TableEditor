@@ -18,12 +18,26 @@
     word-wrap: break-word;
 }
 
-#datatable td:empty, #datatable th:empty {
-    height: 1.4rem;
+#datatable td span, #datatable th span {
+    display: inline-block;
     font-size: 1rem;
+    width: 100%; /* prevent the span from being larger than the cell */
+}
+#datatable td span:empty, #datatable th span:empty {
+
+    height: 1.4rem;
+    
 
 }
 
 #datatable td.selected, #datatable th.selected {
     background-color: #8AA3DD;
+}
+
+.noselect {
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -o-user-select: none;
+  user-select: none;
 }
