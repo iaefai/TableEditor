@@ -10,6 +10,12 @@ class TableEvents {
 	public constructor(public table : Table) {
 		// mousedown in table
         this.table.tableElement.addEventListener("mousedown", e => {
+        	if (e.target instanceof HTMLTableElement) {
+        		return;
+        	}
+
+        	if (e.button !== 0) return; // left button only
+
             switch (this.table.state) {
                 case 0:
                     this.table.a = Point.fromTarget(e.target);
@@ -45,9 +51,21 @@ class TableEvents {
             }
         });
 
+        this.table.tableElement.addEventListener("contextmenu", e => {
+        	console.log("context menu in state " + this.table.state);
+        	switch (this.table.state) {
+        		case 2:
+        		case 4:
+        			this.table.contextMenu(new Point(e.clientX, e.clientY));
+        			e.preventDefault();
+        			return;
+        	}
+        });
+
         // off table listener
         document.addEventListener("mousedown",
             e => {
+            	if (e.button !== 0) return; // left button only
                     switch (this.table.state) {
                     case 0:
                     case 2:
@@ -59,6 +77,7 @@ class TableEvents {
 
 
         this.mouseUpEvent = e => {
+        	if (e.button !== 0) return; // left button only
             switch (this.table.state) {
             case 1:
                 this.table.state = 2;
@@ -93,6 +112,10 @@ class TableEvents {
         });
         
         this.table.tableElement.addEventListener("mouseover", e => {
+        	if (e.target instanceof HTMLTableElement) {
+        		return;
+        	}
+
             switch (this.table.state) {
             case 3:
                 if (e.target == this.table.grid.get(this.table.a)) {

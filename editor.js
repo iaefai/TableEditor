@@ -199,6 +199,11 @@ var TableEvents = (function () {
         this.table = table;
         // mousedown in table
         this.table.tableElement.addEventListener("mousedown", function (e) {
+            if (e.target instanceof HTMLTableElement) {
+                return;
+            }
+            if (e.button !== 0)
+                return; // left button only
             switch (_this.table.state) {
                 case 0:
                     _this.table.a = Point.fromTarget(e.target);
@@ -232,8 +237,20 @@ var TableEvents = (function () {
                     _this.table.state = 1;
             }
         });
+        this.table.tableElement.addEventListener("contextmenu", function (e) {
+            console.log("context menu in state " + _this.table.state);
+            switch (_this.table.state) {
+                case 2:
+                case 4:
+                    _this.table.contextMenu(new Point(e.clientX, e.clientY));
+                    e.preventDefault();
+                    return;
+            }
+        });
         // off table listener
         document.addEventListener("mousedown", function (e) {
+            if (e.button !== 0)
+                return; // left button only
             switch (_this.table.state) {
                 case 0:
                 case 2:
@@ -243,6 +260,8 @@ var TableEvents = (function () {
             }
         });
         this.mouseUpEvent = function (e) {
+            if (e.button !== 0)
+                return; // left button only
             switch (_this.table.state) {
                 case 1:
                     _this.table.state = 2;
@@ -272,6 +291,9 @@ var TableEvents = (function () {
             e.stopPropagation();
         });
         this.table.tableElement.addEventListener("mouseover", function (e) {
+            if (e.target instanceof HTMLTableElement) {
+                return;
+            }
             switch (_this.table.state) {
                 case 3:
                     if (e.target == _this.table.grid.get(_this.table.a)) {
@@ -470,6 +492,9 @@ var Table = (function () {
         this.grid = new TableGrid.Grid(this._table);
         this._events = new TableEvents(this);
     }
+    Table.prototype.contextMenu = function (location) {
+        console.log("Display menu @ " + location.x + ", " + location.y);
+    };
     Table.prototype.updateContextMenu = function () {
         /*if (this._contextMenu !== null) {
             switch (this.state) {
@@ -623,12 +648,12 @@ var Table = (function () {
         if (to === 3) {
             var body = document.getElementsByTagName("body").item(0);
             body.classList.add("noselect");
-            body.addEventListener("mouseup", this._events.mouseUpEvent);
+            window.addEventListener("mouseup", this._events.mouseUpEvent);
         }
         if (from === 3) {
             var body = document.getElementsByTagName("body").item(0);
             body.classList.remove("noselect");
-            body.removeEventListener("mouseup", this._events.mouseUpEvent);
+            window.removeEventListener("mouseup", this._events.mouseUpEvent);
         }
         if (from === 1 && to === 2) {
             // nothing to do, because 1 already selected a

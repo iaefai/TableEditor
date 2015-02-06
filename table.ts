@@ -14,6 +14,9 @@ class Table {
     private _events : TableEvents;
     private _contextMenu : HTMLDivElement;
 
+    public contextMenu(location : Point) {
+        console.log("Display menu @ " + location.x + ", " + location.y);
+    }
     private updateContextMenu() {
         /*if (this._contextMenu !== null) {
             switch (this.state) {
@@ -208,13 +211,13 @@ class Table {
         if (to === 3) {
             var body = document.getElementsByTagName("body").item(0);
             body.classList.add("noselect");
-            body.addEventListener("mouseup", this._events.mouseUpEvent);
+            window.addEventListener("mouseup", this._events.mouseUpEvent);
         }
 
         if (from === 3) {
             var body = document.getElementsByTagName("body").item(0);
             body.classList.remove("noselect");
-            body.removeEventListener("mouseup", this._events.mouseUpEvent);
+            window.removeEventListener("mouseup", this._events.mouseUpEvent);
         }
 
         if (from === 1 && to === 2) {
