@@ -2,6 +2,7 @@
 /// <reference path="utilities.ts"/>
 /// <reference path="table_grid.ts"/>
 /// <reference path="table_events.ts"/>
+/// <reference path="table_operations.ts"/>
 
 class Table {
     private _a : Point = null;
@@ -12,24 +13,126 @@ class Table {
     private _grid : TableGrid.Grid;
     private _table : HTMLTableElement;
     private _events : TableEvents;
+    private _operations : TableOperations;
+
     private _contextMenu : HTMLDivElement;
 
     public contextMenu(location : Point) {
         console.log("Display menu @ " + location.x + ", " + location.y);
     }
     private updateContextMenu() {
-        /*if (this._contextMenu !== null) {
-            switch (this.state) {
-                case 2:
-                    this._contextMenu.textContent = "insert before, insert after, delete before, delete after";
+        var main_elements = document.querySelectorAll(".main_op");
+
+        switch (this.state) {
+
+            case 4:
+                DOM.forall(main_elements, e => {
+                    (<HTMLElement>e).disabled = false;
+                    });
+                (<HTMLElement>document.querySelector("#merge_cells")).disabled = false;
+                document.querySelector("#merge_cells").textContent = "Merge Cells";
+                break;
+            case 2: 
+                DOM.forall(main_elements, e => {
+                    (<HTMLElement>e).disabled = false;
+                    });
+                (<HTMLElement>document.querySelector("#merge_cells")).disabled = true;
+                var cell = this.grid.get(this.a);
+                if (cell.colSpan != 1 || cell.rowSpan != 1) {
+                    var button = <HTMLElement>document.querySelector("#merge_cells");
+                    button.textContent = "Split Cell";
+                    button.disabled = false;
+                }
+                break;
+            default:
+                (<HTMLElement>document.querySelector("#merge_cells")).disabled = true;
+                DOM.forall(main_elements, e => {
+                    (<HTMLElement>e).disabled = true;
+                    });
+        }
+    }
+
+    // Merge cells between a and b
+    // assumptions: 
+    //   1. elements selected have selected class
+    //   2. we are in state 4
+    // post:
+    //   1. one cell remains
+    //   2. we are in state 2
+    public mergeCells() {        
+        var left = Math.min(this.a.x, this.b.x);
+        var top = Math.min(this.a.y, this.b.y);
+
+        var top_left = this.grid.get(left, top);
+        top_left.classList.remove("selected");
+
+        var cells = <Array<HTMLTableCellElement>>
+            Array.prototype.slice.call(this._table.querySelectorAll(".selected"));
+
+        for (var i = 0; i < cells.length; ++i) {
+            cells[i].parentNode.removeChild(cells[i]);
+        }
+
+        top_left.rowSpan = Math.abs(this.b.y - this.a.y) + 1;
+        top_left.colSpan = Math.abs(this.b.x - this.a.x) + 1;
+
+        this.b = null;
+        this.state = 2;
+        this.grid.update();
+    }
+
+    // Split cells
+    // pre:
+    //  1. element selected has a colspan or rowspan > 1
+    //  2. we are in state 2
+    // post:
+    //  1. number of cells increase my how many atomic cells existed prior
+    //  2. we are in state 4
+    public splitCell() {
+        var cell = this.grid.get(this.a);
+        var start_row = this.a.y;
+        var start_col = this.a.x;
+        var colspan = cell.colSpan;
+        var rowspan = cell.rowSpan;
+
+        var text = cell.textContent;
+        var refcolumn = start_col + colspan;
+        if (refcolumn > this.grid.width)
+            refcolumn = null;
+
+        cell.parentNode.removeChild(cell);
+
+        for (var i = start_row; i < start_row + rowspan; ++i) { 
+            var row = this.tableElement.rows.item(i);
+
+            var refcell : HTMLTableCellElement;
+            var refcolumn2 = refcolumn;
+
+            while (true) {
+                if (refcolumn2 === null || refcolumn2 >= this.grid.width) {
+                    refcell = null;
                     break;
-                case 4:
-                    this._contextMenu.textContent = "insert before, insert after, delete before, delete after, merge cells";
+                }
+
+                refcell = this.grid.get(refcolumn2, i);
+                if (parseInt(refcell.dataset["top"]) === i) {
                     break;
-                default:
-                    this._contextMenu.textContent = "Nothing to do";
+                }
+
+                refcolumn2++;
             }
-        }*/
+
+            for (var j = start_col; j < start_col + colspan; ++j) {
+                var blankcell = document.createElement("td");
+                row.insertBefore(blankcell, refcell);
+            }
+        }
+
+        this.grid.update();
+
+        this.a = new Point(start_col, start_row);
+        this.b = new Point(start_col + colspan - 1, start_row + rowspan - 1);
+        this.state = 4;
     }
 
     private startEditing(cell : Point) {
@@ -196,8 +299,9 @@ class Table {
 
         this._events = new TableEvents(this);
 
-        
-        
+        this.updateContextMenu();
+
+        this._operations = new TableOperations(this);
         
     }
 

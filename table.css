@@ -41,3 +41,9 @@
   -o-user-select: none;
   user-select: none;
 }
+
+.table_menu {
+    position: absolute;
+    display: none;
+}
+

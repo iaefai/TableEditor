@@ -46,7 +46,7 @@ module DOM {
         for (var i = 0; i < headrows; ++i) {
             var row = document.createElement("tr");
             for (var j = 0; j < cols + headcols; ++j) {
-                var col = document.createElement("th");
+                var col = document.createElement("td");
                 var div = document.createElement("span");
                 col.appendChild(div);
                 row.appendChild(col);
@@ -57,7 +57,7 @@ module DOM {
         for (var i = 0; i < rows; ++i) {
             var row = document.createElement("tr");
             for (var j = 0; j < headcols; ++j) {
-                var col = document.createElement("th");
+                var col = document.createElement("td");
                 var div = document.createElement("span");
                 col.appendChild(div);
                 row.appendChild(col);
@@ -73,4 +73,15 @@ module DOM {
 
         return table;
     }
+
+    export function forall(nodes : NodeList, f : (n : Node) => void) : void {
+        for (var i = 0; i < nodes.length; ++i) {
+            f(nodes.item(i));
+        }
+    }
+
+    export function cell() : HTMLTableCellElement {
+        return document.createElement("td");
+    }
 }
+

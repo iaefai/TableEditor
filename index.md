@@ -12,6 +12,15 @@ Future work will include merging and splitting table cells.
 
 To use the table editor, clicking in a cell will select it, dragging from one cell to another will select multiple cells. When a single cell is selected, clicking again or typing will enter edit mode.
 
+<div class="toolbar">
+    <button class="main_op" id="add_row_above">Add Row Above</button>
+    <button class="main_op" id="add_row_below">Add Row Below</button>
+    <button class="main_op" id="add_col_before">Add Column Before</button>
+    <button class="main_op" id="add_col_after">Add Column After</button>
+    <button class="main_op" id="delete_row">Delete Row</button>
+    <button class="main_op" id="delete_col">Delete Column</button>	
+    <button id="merge_cells">Merge Cells</button>
+</div>
 <div class="table_div">
 </div>
 

@@ -35,7 +35,7 @@ var DOM;
         for (var i = 0; i < headrows; ++i) {
             var row = document.createElement("tr");
             for (var j = 0; j < cols + headcols; ++j) {
-                var col = document.createElement("th");
+                var col = document.createElement("td");
                 var div = document.createElement("span");
                 col.appendChild(div);
                 row.appendChild(col);
@@ -45,7 +45,7 @@ var DOM;
         for (var i = 0; i < rows; ++i) {
             var row = document.createElement("tr");
             for (var j = 0; j < headcols; ++j) {
-                var col = document.createElement("th");
+                var col = document.createElement("td");
                 var div = document.createElement("span");
                 col.appendChild(div);
                 row.appendChild(col);
@@ -61,6 +61,16 @@ var DOM;
         return table;
     }
     DOM.createTable = createTable;
+    function forall(nodes, f) {
+        for (var i = 0; i < nodes.length; ++i) {
+            f(nodes.item(i));
+        }
+    }
+    DOM.forall = forall;
+    function cell() {
+        return document.createElement("td");
+    }
+    DOM.cell = cell;
 })(DOM || (DOM = {}));
 /// <reference path="utilities.ts"/>
 var TableGrid;
@@ -467,10 +477,57 @@ var TableEvents = (function () {
     };
     return TableEvents;
 })();
+var TableOperations = (function () {
+    function TableOperations(table) {
+        var _this = this;
+        this.table = table;
+        this.add_row_above = function (e) {
+            console.log("add row above");
+            return false;
+        };
+        this.add_row_below = function (e) {
+            return false;
+        };
+        this.add_column_before = function (e) {
+            return false;
+        };
+        this.add_column_after = function (e) {
+            return false;
+        };
+        this.delete_row = function (e) {
+            return false;
+        };
+        this.delete_column = function (e) {
+            return false;
+        };
+        this.merge_cells = function (e) {
+            if (_this.table.state === 4) {
+                _this.table.mergeCells();
+            }
+            else if (_this.table.state === 2) {
+                _this.table.splitCell();
+            }
+            else {
+                throw "Invalid state detected for merging: " + _this.table.state;
+            }
+            return false;
+        };
+        document.querySelector("#merge_cells").addEventListener("click", this.merge_cells, true);
+        // prevent buttons from triggering deselection of table
+        document.querySelector(".toolbar").addEventListener("mousedown", function (e) {
+            e.stopPropagation();
+        }, true);
+        document.querySelector(".toolbar").addEventListener("mouseup", function (e) {
+            e.stopPropagation();
+        }, true);
+    }
+    return TableOperations;
+})();
 /// <reference path="mousetrap.d.ts"/>
 /// <reference path="utilities.ts"/>
 /// <reference path="table_grid.ts"/>
 /// <reference path="table_events.ts"/>
+/// <reference path="table_operations.ts"/>
 var Table = (function () {
     function Table(parent, rows, cols, headrows, headcols) {
         this._a = null;
@@ -491,23 +548,105 @@ var Table = (function () {
         }
         this.grid = new TableGrid.Grid(this._table);
         this._events = new TableEvents(this);
+        this.updateContextMenu();
+        this._operations = new TableOperations(this);
     }
     Table.prototype.contextMenu = function (location) {
         console.log("Display menu @ " + location.x + ", " + location.y);
     };
     Table.prototype.updateContextMenu = function () {
-        /*if (this._contextMenu !== null) {
-            switch (this.state) {
-                case 2:
-                    this._contextMenu.textContent = "insert before, insert after, delete before, delete after";
+        var main_elements = document.querySelectorAll(".main_op");
+        switch (this.state) {
+            case 4:
+                DOM.forall(main_elements, function (e) {
+                    e.disabled = false;
+                });
+                document.querySelector("#merge_cells").disabled = false;
+                document.querySelector("#merge_cells").textContent = "Merge Cells";
+                break;
+            case 2:
+                DOM.forall(main_elements, function (e) {
+                    e.disabled = false;
+                });
+                document.querySelector("#merge_cells").disabled = true;
+                var cell = this.grid.get(this.a);
+                if (cell.colSpan != 1 || cell.rowSpan != 1) {
+                    var button = document.querySelector("#merge_cells");
+                    button.textContent = "Split Cell";
+                    button.disabled = false;
+                }
+                break;
+            default:
+                document.querySelector("#merge_cells").disabled = true;
+                DOM.forall(main_elements, function (e) {
+                    e.disabled = true;
+                });
+        }
+    };
+    // Merge cells between a and b
+    // assumptions: 
+    //   1. elements selected have selected class
+    //   2. we are in state 4
+    // post:
+    //   1. one cell remains
+    //   2. we are in state 2
+    Table.prototype.mergeCells = function () {
+        var left = Math.min(this.a.x, this.b.x);
+        var top = Math.min(this.a.y, this.b.y);
+        var top_left = this.grid.get(left, top);
+        top_left.classList.remove("selected");
+        var cells = Array.prototype.slice.call(this._table.querySelectorAll(".selected"));
+        for (var i = 0; i < cells.length; ++i) {
+            cells[i].parentNode.removeChild(cells[i]);
+        }
+        top_left.rowSpan = Math.abs(this.b.y - this.a.y) + 1;
+        top_left.colSpan = Math.abs(this.b.x - this.a.x) + 1;
+        this.b = null;
+        this.state = 2;
+        this.grid.update();
+    };
+    // Split cells
+    // pre:
+    //  1. element selected has a colspan or rowspan > 1
+    //  2. we are in state 2
+    // post:
+    //  1. number of cells increase my how many atomic cells existed prior
+    //  2. we are in state 4
+    Table.prototype.splitCell = function () {
+        var cell = this.grid.get(this.a);
+        var start_row = this.a.y;
+        var start_col = this.a.x;
+        var colspan = cell.colSpan;
+        var rowspan = cell.rowSpan;
+        var text = cell.textContent;
+        var refcolumn = start_col + colspan;
+        if (refcolumn > this.grid.width)
+            refcolumn = null;
+        cell.parentNode.removeChild(cell);
+        for (var i = start_row; i < start_row + rowspan; ++i) {
+            var row = this.tableElement.rows.item(i);
+            var refcell;
+            var refcolumn2 = refcolumn;
+            while (true) {
+                if (refcolumn2 === null || refcolumn2 >= this.grid.width) {
+                    refcell = null;
                     break;
-                case 4:
-                    this._contextMenu.textContent = "insert before, insert after, delete before, delete after, merge cells";
+                }
+                refcell = this.grid.get(refcolumn2, i);
+                if (parseInt(refcell.dataset["top"]) === i) {
                     break;
-                default:
-                    this._contextMenu.textContent = "Nothing to do";
+                }
+                refcolumn2++;
             }
-        }*/
+            for (var j = start_col; j < start_col + colspan; ++j) {
+                var blankcell = document.createElement("td");
+                row.insertBefore(blankcell, refcell);
+            }
+        }
+        this.grid.update();
+        this.a = new Point(start_col, start_row);
+        this.b = new Point(start_col + colspan - 1, start_row + rowspan - 1);
+        this.state = 4;
     };
     Table.prototype.startEditing = function (cell) {
         var element = this.grid.get(cell);
