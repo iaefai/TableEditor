@@ -124,8 +124,105 @@ module TableGrid {
             var y : number = arguments[1];
             return this._grid[y][x];
         }
+
+        public isSpanned(p : Point) : boolean;
+        public isSpanned(x : number, y : number) : boolean;
+        public isSpanned() : boolean {
+            if (arguments.length === 1) {   // Point
+                var p : Point = arguments[0];                
+            } else { // otherwise x and y
+                var x : number = arguments[0];
+                var y : number = arguments[1];
+                var p = new Point(x, y);
+            }
+
+            return this.get(p).colSpan !== 1 || this.get(p).rowSpan !== 1;
+        }
+
+        // determines if the cell at p is the original cell, or part of the 'phantom' span
+        public isOriginal(p : Point) : boolean;
+        public isOriginal(x : number, y : number) : boolean;
+        public isOriginal() : boolean {
+
+            if (arguments.length === 1) {   // Point
+                var p : Point = arguments[0];                
+            } else { // otherwise x and y
+                var x : number = arguments[0];
+                var y : number = arguments[1];
+                var p = new Point(x, y);
+            }
+
+            var cell = this.get(p);
+
+            return parseInt(cell.dataset["top"]) === p.y 
+                && parseInt(cell.dataset["left"]) === p.x;
+        }
+
+        public original(p : Point) : Point {
+            var cell = this.get(p);
+            return new Point(parseInt(cell.dataset["left"]),
+                parseInt(cell.dataset["top"]));
+        }
+
+        public isOriginalSameRow(p : Point) : boolean;
+        public isOriginalSameRow(x : number, y : number) : boolean;
+        public isOriginalSameRow() : boolean {
+            if (arguments.length === 1) {   // Point
+                var p : Point = arguments[0];                
+            } else { // otherwise x and y
+                var x : number = arguments[0];
+                var y : number = arguments[1];
+                var p = new Point(x, y);
+            }
+
+            var cell = this.get(p);
+
+            return parseInt(cell.dataset["top"]) === p.y;
+        }
         
-        public select(rect : Rect) {
+
+        public isOriginalSameColumn(p : Point) : boolean;
+        public isOriginalSameColumn(x : number, y : number) : boolean;
+        public isOriginalSameColumn() : boolean {
+            if (arguments.length === 1) {   // Point
+                var p : Point = arguments[0];                
+            } else { // otherwise x and y
+                var x : number = arguments[0];
+                var y : number = arguments[1];
+                var p = new Point(x, y);
+            }
+
+            var cell = this.get(p);
+
+            return parseInt(cell.dataset["left"]) === p.x;
+        }
+
+        public left(p : Point) : number {
+            var cell = this.get(p);
+
+            return parseInt(cell.dataset["left"]);
+        }
+
+        public top(p : Point) : number {
+            var cell = this.get(p);
+
+            return parseInt(cell.dataset["top"]);
+        }
+
+        public right(p : Point) : number {
+            var cell = this.get(p);
+
+            return parseInt(cell.dataset["left"]) + cell.colSpan - 1;
+        }
+
+        public bottom(p : Point) : number {
+            var cell = this.get(p);
+
+            return parseInt(cell.dataset["top"]) + cell.rowSpan - 1;
+        }
+
+
+        public select(rect : Rect) : void {
         
             var p1 = rect.p1,
                 p2 = rect.p2;
@@ -134,13 +231,18 @@ module TableGrid {
                 top = Math.min(p1.y, p2.y),
                 bottom = Math.max(p1.y, p2.y),
                 right = Math.max(p1.x, p2.x);
-            
+
+            // we have the top left, but the bottom right is not really corrected for colspan
+
             for (var i = left; i <= right; ++i) {
                 for (var j = top; j <= bottom; ++j) {
                     this.get(i, j).classList.add("selected");
                 }
             }
+
         }
+
+
         
         public deselect(rect : Rect) {
         

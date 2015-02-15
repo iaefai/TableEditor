@@ -9,11 +9,12 @@ class Table {
     private _b : Point = null;
     private old_a : Point = null;
     private old_b : Point = null;
-    private _state : number = 0;
+    private _state : number = 0; 
     private _grid : TableGrid.Grid;
     private _table : HTMLTableElement;
     private _events : TableEvents;
     private _operations : TableOperations;
+    private _selection : Rect;
 
     private _contextMenu : HTMLDivElement;
 
@@ -108,6 +109,8 @@ class Table {
             var refcell : HTMLTableCellElement;
             var refcolumn2 = refcolumn;
 
+            // handles case where the row span causes there to be no cell available
+            // for refcell
             while (true) {
                 if (refcolumn2 === null || refcolumn2 >= this.grid.width) {
                     refcell = null;
@@ -132,7 +135,30 @@ class Table {
 
         this.a = new Point(start_col, start_row);
         this.b = new Point(start_col + colspan - 1, start_row + rowspan - 1);
+
+        this.grid.get(this.a).textContent = text;
+
         this.state = 4;
+    }
+
+    public addRowAbove() {
+        var row = this.a.y;
+        var newrow = this.tableElement.insertRow(row);        
+
+        for (var i = 0; i < this.grid.width; ++i) {
+            if (this.grid.isOriginal(i, row)) {
+                var cell = this.grid.get(i, row);
+
+                newrow.appendChild(DOM.cell(cell.rowSpan, cell.colSpan));
+            } else {
+                if (this.grid.isOriginalSameColumn(i, row)) {
+                    this.grid.get(i, row).rowSpan++;
+                }
+            }
+        }
+        
+        this.grid.update();
+        this.a.y++;
     }
 
     private startEditing(cell : Point) {

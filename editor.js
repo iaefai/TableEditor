@@ -1,3 +1,170 @@
+var sys;
+(function (sys) {
+    var ArrayList = (function () {
+        function ArrayList(items) {
+            if (items === undefined) {
+                this._data = new Array();
+            }
+            else {
+                this._data = items.slice();
+            }
+        }
+        ArrayList.fromNodeList = function (list) {
+            var arr = new ArrayList();
+            for (var i = 0; i < list.length; ++i) {
+                arr.append(list.item(i));
+            }
+            return arr;
+        };
+        Object.defineProperty(ArrayList.prototype, "length", {
+            get: function () {
+                return this._data.length;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        ArrayList.prototype.get = function (n) {
+            return this._data[n];
+        };
+        ArrayList.prototype.has = function (item) {
+            return this._data.indexOf(item) != -1;
+        };
+        ArrayList.prototype.find = function (item, comp) {
+            if (comp === undefined)
+                return this._data.indexOf(item);
+            for (var i = 0; i < this.length; ++i)
+                if (comp(item, this.get(i)) == 0)
+                    return i;
+            return -1;
+        };
+        ArrayList.prototype.empty = function () {
+            return this._data.length == 0;
+        };
+        ArrayList.prototype.foreach = function (f) {
+            for (var i = 0; i < this.length; ++i) {
+                f(this._data[i]);
+            }
+        };
+        // untested
+        //public insert(index : number, ...items : T[]) : void {
+        //    if (items.length === 1) {
+        //        this._data.splice(index, 0, items[0]);
+        //    } else {
+        //        var newarray = new Array<T>();
+        //        newarray.concat(this._data.slice(0, index));
+        //        newarray.concat(items);
+        //        newarray.concat(this._data.slice(index));
+        //        this._data = newarray;
+        //    }
+        //}
+        ArrayList.prototype.append = function () {
+            var items = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                items[_i - 0] = arguments[_i];
+            }
+            this._data = this._data.concat(items);
+        };
+        // untested
+        ArrayList.prototype.prepend = function () {
+            var items = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                items[_i - 0] = arguments[_i];
+            }
+            this._data = items.concat(this._data);
+        };
+        // untested
+        ArrayList.prototype.remove = function (index) {
+            this._data.splice(index, 1);
+        };
+        // untested
+        ArrayList.prototype.removeAll = function (item, comp) {
+            var i = this.find(item, comp);
+            while (i !== -1) {
+                this.remove(i);
+                i = this.find(item, comp);
+            }
+        };
+        // untested
+        ArrayList.prototype.removeDuplicates = function (comp) {
+            for (var i = 0; i < this._data.length; ++i) {
+                for (var j = i + 1; j < this._data.length;) {
+                    if (comp !== undefined) {
+                        if (comp(this._data[i], this._data[j]) === 0) {
+                            this.remove(j);
+                            continue;
+                        }
+                        else {
+                            j++;
+                            continue;
+                        }
+                    }
+                    else {
+                        if (this._data[i] === this._data[j]) {
+                            this.remove(j);
+                            continue;
+                        }
+                        else {
+                            j++;
+                            continue;
+                        }
+                    }
+                }
+            }
+        };
+        ArrayList.prototype.map = function (f) {
+            var n = new ArrayList();
+            for (var i = 0; i < this.length; ++i) {
+                n.append(f(this.get(i)));
+            }
+            return n;
+        };
+        ArrayList.prototype.foldr = function (f, init) {
+            if (this.length == 0)
+                return init;
+            var result = init;
+            for (var i = this._data.length - 1; i >= 0; --i) {
+                result = f(this._data[i], result);
+            }
+            return result;
+        };
+        ArrayList.prototype.foldl = function (f, init) {
+            if (this.length == 0)
+                return init;
+            var result = init;
+            for (var i = 0; i < this._data.length; ++i)
+                result = f(result, this._data[i]);
+            return result;
+        };
+        ArrayList.prototype.foldr1 = function (f) {
+            if (this.length == 0)
+                throw new Error("foldr1 requires a non-empty list");
+            var result = this._data[this._data.length - 1]; // last entry
+            for (var i = this._data.length - 2; i >= 0; --i) {
+                result = f(this._data[i], result);
+            }
+            return result;
+        };
+        ArrayList.prototype.foldl1 = function (f) {
+            if (this.length == 0)
+                throw new Error("foldl1 requires a non-empty list");
+            var result = this._data[0];
+            for (var i = 1; i < this._data.length; ++i)
+                result = f(result, this._data[i]);
+            return result;
+        };
+        ArrayList.prototype.filter = function (f) {
+            var array = new ArrayList();
+            this.foreach(function (x) {
+                if (f(x))
+                    array.append(x);
+            });
+            return array;
+        };
+        return ArrayList;
+    })();
+    sys.ArrayList = ArrayList;
+})(sys || (sys = {}));
+/// <reference path="sys/ArrayList.ts"/> 
 var Point = (function () {
     function Point(x, y) {
         this.x = x;
@@ -19,6 +186,23 @@ var Point = (function () {
         }
         return new Point(parseInt(element.dataset["left"]), parseInt(element.dataset["top"]));
     };
+    // lexicographical order, total ordering
+    Point.comparator = function () {
+        return function (p1, p2) {
+            if (p1.x < p2.x)
+                return -1;
+            else if (p1.x === p2.x) {
+                if (p1.y < p2.y)
+                    return -1;
+                else if (p1.y === p2.y)
+                    return 0;
+                else
+                    return 1;
+            }
+            else
+                return 1;
+        };
+    };
     return Point;
 })();
 var Rect = (function () {
@@ -26,35 +210,82 @@ var Rect = (function () {
         this.p1 = p1;
         this.p2 = p2;
     }
+    // makes p1 upper left, p2 lower right
+    Rect.prototype.normalize = function () {
+        var left = Math.min(this.p1.x, this.p2.x);
+        var top = Math.min(this.p1.y, this.p2.y);
+        var right = Math.max(this.p1.x, this.p2.x);
+        var bottom = Math.max(this.p1.y, this.p2.y);
+        return new Rect(new Point(left, top), new Point(right, bottom));
+    };
+    Object.defineProperty(Rect.prototype, "width", {
+        get: function () {
+            var norm = this.normalize();
+            return norm.p2.x - norm.p1.x + 1;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Rect.prototype, "height", {
+        get: function () {
+            var norm = this.normalize();
+            return norm.p2.y - norm.p1.y + 1;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Rect.prototype, "left", {
+        get: function () {
+            var norm = this.normalize();
+            return norm.p1.x;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Rect.prototype, "top", {
+        get: function () {
+            var norm = this.normalize();
+            return norm.p1.y;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Rect.prototype, "right", {
+        get: function () {
+            var norm = this.normalize();
+            return norm.p2.x;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Rect.prototype, "bottom", {
+        get: function () {
+            var norm = this.normalize();
+            return norm.p2.y;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Rect.prototype.all = function () {
+        var list = new sys.ArrayList();
+        var normalized = this.normalize();
+        for (var i = normalized.p1.x; i <= normalized.p2.x; ++i) {
+            for (var j = normalized.p1.y; j <= normalized.p2.y; ++j) {
+                list.append(new Point(i, j));
+            }
+        }
+        return list;
+    };
     return Rect;
 })();
 var DOM;
 (function (DOM) {
-    function createTable(rows, cols, headrows, headcols) {
+    function createTable(rows, cols) {
         var table = document.createElement("table");
-        for (var i = 0; i < headrows; ++i) {
-            var row = document.createElement("tr");
-            for (var j = 0; j < cols + headcols; ++j) {
-                var col = document.createElement("td");
-                var div = document.createElement("span");
-                col.appendChild(div);
-                row.appendChild(col);
-            }
-            table.appendChild(row);
-        }
         for (var i = 0; i < rows; ++i) {
             var row = document.createElement("tr");
-            for (var j = 0; j < headcols; ++j) {
-                var col = document.createElement("td");
-                var div = document.createElement("span");
-                col.appendChild(div);
-                row.appendChild(col);
-            }
             for (var j = 0; j < cols; ++j) {
-                var col = document.createElement("td");
-                var div = document.createElement("span");
-                col.appendChild(div);
-                row.appendChild(col);
+                row.appendChild(this.cell());
             }
             table.appendChild(row);
         }
@@ -67,11 +298,23 @@ var DOM;
         }
     }
     DOM.forall = forall;
-    function cell() {
-        return document.createElement("td");
+    function cell(rowspan, colspan) {
+        if (rowspan === void 0) { rowspan = 1; }
+        if (colspan === void 0) { colspan = 1; }
+        var cell = document.createElement("td");
+        var span = document.createElement("span");
+        cell.appendChild(span);
+        cell.colSpan = colspan;
+        cell.rowSpan = rowspan;
+        span.textContent = randomText(5);
+        return cell;
     }
     DOM.cell = cell;
 })(DOM || (DOM = {}));
+function randomText(len) {
+    if (len === void 0) { len = 5; }
+    return Math.random().toString(36).substr(2, 5);
+}
 /// <reference path="utilities.ts"/>
 var TableGrid;
 (function (TableGrid) {
@@ -166,6 +409,73 @@ var TableGrid;
             var y = arguments[1];
             return this._grid[y][x];
         };
+        Grid.prototype.isSpanned = function () {
+            if (arguments.length === 1) {
+                var p = arguments[0];
+            }
+            else {
+                var x = arguments[0];
+                var y = arguments[1];
+                var p = new Point(x, y);
+            }
+            return this.get(p).colSpan !== 1 || this.get(p).rowSpan !== 1;
+        };
+        Grid.prototype.isOriginal = function () {
+            if (arguments.length === 1) {
+                var p = arguments[0];
+            }
+            else {
+                var x = arguments[0];
+                var y = arguments[1];
+                var p = new Point(x, y);
+            }
+            var cell = this.get(p);
+            return parseInt(cell.dataset["top"]) === p.y && parseInt(cell.dataset["left"]) === p.x;
+        };
+        Grid.prototype.original = function (p) {
+            var cell = this.get(p);
+            return new Point(parseInt(cell.dataset["left"]), parseInt(cell.dataset["top"]));
+        };
+        Grid.prototype.isOriginalSameRow = function () {
+            if (arguments.length === 1) {
+                var p = arguments[0];
+            }
+            else {
+                var x = arguments[0];
+                var y = arguments[1];
+                var p = new Point(x, y);
+            }
+            var cell = this.get(p);
+            return parseInt(cell.dataset["top"]) === p.y;
+        };
+        Grid.prototype.isOriginalSameColumn = function () {
+            if (arguments.length === 1) {
+                var p = arguments[0];
+            }
+            else {
+                var x = arguments[0];
+                var y = arguments[1];
+                var p = new Point(x, y);
+            }
+            var cell = this.get(p);
+            return parseInt(cell.dataset["left"]) === p.x;
+        };
+        Grid.prototype.left = function (p) {
+            var cell = this.get(p);
+            return parseInt(cell.dataset["left"]);
+        };
+        Grid.prototype.top = function (p) {
+            var cell = this.get(p);
+            return parseInt(cell.dataset["top"]);
+        };
+        Grid.prototype.right = function (p) {
+            var cell = this.get(p);
+            return parseInt(cell.dataset["left"]) + cell.colSpan - 1;
+        };
+        Grid.prototype.bottom = function (p) {
+            var cell = this.get(p);
+            return parseInt(cell.dataset["top"]) + cell.rowSpan - 1;
+        };
         Grid.prototype.select = function (rect) {
             var p1 = rect.p1, p2 = rect.p2;
             var left = Math.min(p1.x, p2.x), top = Math.min(p1.y, p2.y), bottom = Math.max(p1.y, p2.y), right = Math.max(p1.x, p2.x);
@@ -202,437 +512,137 @@ var TableGrid;
     })();
     TableGrid.Grid = Grid;
 })(TableGrid || (TableGrid = {}));
-/// <references path="table.ts"/>
-var TableEvents = (function () {
-    function TableEvents(table) {
-        var _this = this;
-        this.table = table;
-        // mousedown in table
-        this.table.tableElement.addEventListener("mousedown", function (e) {
-            if (e.target instanceof HTMLTableElement) {
-                return;
-            }
-            if (e.button !== 0)
-                return; // left button only
-            switch (_this.table.state) {
-                case 0:
-                    _this.table.a = Point.fromTarget(e.target);
-                    _this.table.state = 1;
-                    break;
-                case 2:
-                    if (e.target === _this.table.grid.get(_this.table.a)) {
-                        _this.table.state = 6;
-                    }
-                    else {
-                        _this.table.a = Point.fromTarget(e.target);
-                        _this.table.state = 1;
-                    }
-                    break;
-                case 4:
-                    _this.table.b = null;
-                    _this.table.a = Point.fromTarget(e.target);
-                    _this.table.state = 1;
-                    break;
-                case 5:
-                    if (e.target !== _this.table.grid.get(_this.table.a)) {
-                        _this.table.a = Point.fromTarget(e.target);
-                        _this.table.state = 1;
-                    }
-            }
-            e.stopPropagation();
-        });
-        this.table.tableElement.addEventListener("mousemove", function (e) {
-            switch (_this.table.state) {
-                case 6:
-                    _this.table.state = 1;
-            }
-        });
-        this.table.tableElement.addEventListener("contextmenu", function (e) {
-            console.log("context menu in state " + _this.table.state);
-            switch (_this.table.state) {
-                case 2:
-                case 4:
-                    _this.table.contextMenu(new Point(e.clientX, e.clientY));
-                    e.preventDefault();
-                    return;
-            }
-        });
-        // off table listener
-        document.addEventListener("mousedown", function (e) {
-            if (e.button !== 0)
-                return; // left button only
-            switch (_this.table.state) {
-                case 0:
-                case 2:
-                case 4:
-                case 5:
-                    _this.table.state = 0;
-            }
-        });
-        this.mouseUpEvent = function (e) {
-            if (e.button !== 0)
-                return; // left button only
-            switch (_this.table.state) {
-                case 1:
-                    _this.table.state = 2;
-                    break;
-                case 3:
-                    _this.table.state = 4;
-                    break;
-                case 6:
-                    _this.table.state = 5;
-                    break;
-            }
-            e.stopPropagation();
-        };
-        this.table.tableElement.addEventListener("mouseup", this.mouseUpEvent);
-        this.table.tableElement.addEventListener("mouseout", function (e) {
-            switch (_this.table.state) {
-                case 1:
-                    var t = Point.fromTarget(e.target);
-                    console.log("mouseOut: target(" + t.x + ", " + t.y + ") a(" + _this.table.a.x + ", " + _this.table.a.y + ")");
-                    console.log(Point.fromTarget(e.target).equals(_this.table.a));
-                    //                if (e.target === this.table.grid.get(this.table.a)) {
-                    if (Point.fromTarget(e.target).equals(_this.table.a)) {
-                        _this.table.b = Point.fromTarget(e.relatedTarget);
-                        _this.table.state = 3;
-                    }
-            }
-            e.stopPropagation();
-        });
-        this.table.tableElement.addEventListener("mouseover", function (e) {
-            if (e.target instanceof HTMLTableElement) {
-                return;
-            }
-            switch (_this.table.state) {
-                case 3:
-                    if (e.target == _this.table.grid.get(_this.table.a)) {
-                        _this.table.b = null;
-                        _this.table.state = 1;
-                    }
-                    else {
-                        if (e.target === null) {
-                        }
-                        _this.table.b = Point.fromTarget(e.target);
-                    }
-            }
-            e.stopPropagation();
-        });
-        document.addEventListener("keypress", function (e) {
-            switch (_this.table.state) {
-                case 2:
-                    //                var charCode = (typeof e.which == "number") ? e.which : e.keyCode;
-                    //                this.table.grid.get(this.table.a).textContent = String.fromCharCode(charCode);
-                    _this.table.state = 5;
-            }
-        });
-        Mousetrap.bind("esc", function (e) {
-            switch (_this.table.state) {
-                case 5:
-                    console.log("escape!");
-                    _this.table.state = 2;
-                    return false;
-            }
-        });
-        Mousetrap.bind("tab", function (e) {
-            switch (_this.table.state) {
-                case 5:
-                    _this.table.state = 2;
-                    _this.table.a = new Point(_this.table.a.x + 1, _this.table.a.y);
-                    return false;
-            }
-        });
-        Mousetrap.bind("enter", function (e) {
-            switch (_this.table.state) {
-                case 5:
-                    _this.table.state = 2;
-                    _this.table.a = new Point(_this.table.a.x, _this.table.a.y + 1);
-                    return false;
-            }
-        });
-        var __this = this;
-        Mousetrap.bind("left", function (e) {
-            switch (_this.table.state) {
-                case 4:
-                    _this.table.b = null;
-                    _this.table.state = 2;
-                case 2:
-                    _this.table.a = new Point(_this.table.a.x - 1, _this.table.a.y);
-                    return false;
-            }
-            return true;
-        });
-        Mousetrap.bind("up", function (e) {
-            switch (_this.table.state) {
-                case 4:
-                    _this.table.b = null;
-                    _this.table.state = 2;
-                case 2:
-                    _this.table.a = new Point(_this.table.a.x, _this.table.a.y - 1);
-                    return false;
-            }
-            return true;
-        });
-        Mousetrap.bind("down", function (e) {
-            switch (_this.table.state) {
-                case 4:
-                    _this.table.b = null;
-                    _this.table.state = 2;
-                case 2:
-                    _this.table.a = new Point(_this.table.a.x, _this.table.a.y + 1);
-                    return false;
-            }
-            return true;
-        });
-        Mousetrap.bind("right", function (e) {
-            switch (_this.table.state) {
-                case 4:
-                    _this.table.b = null;
-                    _this.table.state = 2;
-                case 2:
-                    _this.table.a = new Point(_this.table.a.x + 1, _this.table.a.y);
-                    return false;
-            }
-            return true;
-        });
-        Mousetrap.bind("shift+left", function (e) {
-            switch (_this.table.state) {
-                case 2:
-                    _this.table.b = new Point(_this.table.a.x - 1, _this.table.a.y);
-                    _this.table.state = 4;
-                    return false;
-                case 4:
-                    _this.table.b = new Point(_this.table.b.x - 1, _this.table.b.y);
-                    if (_this.table.b.equals(_this.table.a)) {
-                        _this.table.b = null;
-                        _this.table.state = 2;
-                    }
-                    return false;
-            }
-            return true;
-        });
-        Mousetrap.bind("shift+up", function (e) {
-            switch (_this.table.state) {
-                case 2:
-                    _this.table.b = new Point(_this.table.a.x, _this.table.a.y - 1);
-                    _this.table.state = 4;
-                    return false;
-                case 4:
-                    _this.table.b = new Point(_this.table.b.x, _this.table.b.y - 1);
-                    if (_this.table.b.equals(_this.table.a)) {
-                        _this.table.b = null;
-                        _this.table.state = 2;
-                    }
-                    return false;
-            }
-            return true;
-        });
-        Mousetrap.bind("shift+down", function (e) {
-            switch (_this.table.state) {
-                case 2:
-                    _this.table.b = new Point(_this.table.a.x, _this.table.a.y + 1);
-                    _this.table.state = 4;
-                    return false;
-                case 4:
-                    _this.table.b = new Point(_this.table.b.x, _this.table.b.y + 1);
-                    if (_this.table.b.equals(_this.table.a)) {
-                        _this.table.b = null;
-                        _this.table.state = 2;
-                    }
-                    return false;
-            }
-            return true;
-        });
-        Mousetrap.bind("shift+right", function (e) {
-            switch (_this.table.state) {
-                case 2:
-                    _this.table.b = new Point(_this.table.a.x + 1, _this.table.a.y);
-                    _this.table.state = 4;
-                    return false;
-                case 4:
-                    _this.table.b = new Point(_this.table.b.x + 1, _this.table.b.y);
-                    if (_this.table.b.equals(_this.table.a)) {
-                        _this.table.b = null;
-                        _this.table.state = 2;
-                    }
-                    return false;
-            }
-            return true;
-        });
-        Mousetrap.bind(["delete", "backspace"], function (e) {
-            switch (_this.table.state) {
-                case 2:
-                    _this.table.grid.get(_this.table.a).textContent = "";
-                    return false;
-                case 4:
-                    var cells = _this.table.tableElement.querySelectorAll(".selected");
-                    for (var i = 0; i < cells.length; ++i) {
-                        cells.item(i).textContent = "";
-                    }
-                    return false;
-            }
-        });
-    }
-    TableEvents.prototype.registerEditingEvents = function (div) {
-    };
-    return TableEvents;
-})();
-var TableOperations = (function () {
-    function TableOperations(table) {
-        var _this = this;
-        this.table = table;
-        this.add_row_above = function (e) {
-            console.log("add row above");
-            return false;
-        };
-        this.add_row_below = function (e) {
-            return false;
-        };
-        this.add_column_before = function (e) {
-            return false;
-        };
-        this.add_column_after = function (e) {
-            return false;
-        };
-        this.delete_row = function (e) {
-            return false;
-        };
-        this.delete_column = function (e) {
-            return false;
-        };
-        this.merge_cells = function (e) {
-            if (_this.table.state === 4) {
-                _this.table.mergeCells();
-            }
-            else if (_this.table.state === 2) {
-                _this.table.splitCell();
-            }
-            else {
-                throw "Invalid state detected for merging: " + _this.table.state;
-            }
-            return false;
-        };
-        document.querySelector("#merge_cells").addEventListener("click", this.merge_cells, true);
-        // prevent buttons from triggering deselection of table
-        document.querySelector(".toolbar").addEventListener("mousedown", function (e) {
-            e.stopPropagation();
-        }, true);
-        document.querySelector(".toolbar").addEventListener("mouseup", function (e) {
-            e.stopPropagation();
-        }, true);
-    }
-    return TableOperations;
-})();
-/// <reference path="mousetrap.d.ts"/>
+var sys;
+(function (sys) {
+    var Functions;
+    (function (Functions) {
+        //export function max<T>(x : T, y : T) : T {
+        //    return x > y ? x : y;
+        //}
+        Functions.max = function (x, y) { return x > y ? x : y; };
+        Functions.min = function (x, y) { return x < y ? x : y; };
+        Functions.sum = function (x, y) { return x + y; };
+    })(Functions = sys.Functions || (sys.Functions = {}));
+})(sys || (sys = {}));
+/// <reference path="table_grid.ts"/> 
 /// <reference path="utilities.ts"/>
-/// <reference path="table_grid.ts"/>
-/// <reference path="table_events.ts"/>
-/// <reference path="table_operations.ts"/>
+/// <reference path="sys/ArrayList.ts"/> 
+/// <reference path="sys/Functions.ts"/>
 var Table = (function () {
-    function Table(parent, rows, cols, headrows, headcols) {
-        this._a = null;
-        this._b = null;
-        this.old_a = null;
-        this.old_b = null;
-        this._state = 0;
-        this._table = DOM.createTable(rows, cols, headrows, headcols);
+    function Table(parent, rows, cols) {
+        this._table = DOM.createTable(rows, cols);
         this._table.id = "datatable";
         if (parent !== null) {
-            this._contextMenu = document.createElement("div");
-            this._contextMenu.classList.add("contextmenu");
-            parent.appendChild(this._contextMenu);
             parent.appendChild(this._table);
         }
-        else {
-            this._contextMenu = null;
-        }
-        this.grid = new TableGrid.Grid(this._table);
-        this._events = new TableEvents(this);
-        this.updateContextMenu();
-        this._operations = new TableOperations(this);
+        this._grid = new TableGrid.Grid(this._table);
     }
-    Table.prototype.contextMenu = function (location) {
-        console.log("Display menu @ " + location.x + ", " + location.y);
-    };
-    Table.prototype.updateContextMenu = function () {
-        var main_elements = document.querySelectorAll(".main_op");
-        switch (this.state) {
-            case 4:
-                DOM.forall(main_elements, function (e) {
-                    e.disabled = false;
-                });
-                document.querySelector("#merge_cells").disabled = false;
-                document.querySelector("#merge_cells").textContent = "Merge Cells";
-                break;
-            case 2:
-                DOM.forall(main_elements, function (e) {
-                    e.disabled = false;
-                });
-                document.querySelector("#merge_cells").disabled = true;
-                var cell = this.grid.get(this.a);
-                if (cell.colSpan != 1 || cell.rowSpan != 1) {
-                    var button = document.querySelector("#merge_cells");
-                    button.textContent = "Split Cell";
-                    button.disabled = false;
-                }
-                break;
-            default:
-                document.querySelector("#merge_cells").disabled = true;
-                DOM.forall(main_elements, function (e) {
-                    e.disabled = true;
-                });
+    Object.defineProperty(Table.prototype, "table", {
+        get: function () {
+            return this._table;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Table.prototype, "hasSelection", {
+        get: function () {
+            return this._selection !== null;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Table.prototype.select = function (p) {
+        var _this = this;
+        this.deselect();
+        this._selection = p;
+        if (p instanceof Rect) {
+            var left = p.all().map(function (x) { return _this._grid.left(x); }).foldr1(sys.Functions.min);
+            var top = p.all().map(function (x) { return _this._grid.top(x); }).foldr1(sys.Functions.min);
+            var right = p.all().map(function (x) { return _this._grid.right(x); }).foldr1(sys.Functions.max);
+            var bottom = p.all().map(function (x) { return _this._grid.bottom(x); }).foldr1(sys.Functions.max);
+            var selection = new Rect(new Point(left, top), new Point(right, bottom));
+            selection.all().foreach(function (p) {
+                _this._grid.get(p).classList.add("selected");
+            });
+            this._selection = selection;
+        }
+        else if (p instanceof Point) {
+            this._grid.get(p).classList.add("selected");
         }
     };
-    // Merge cells between a and b
-    // assumptions: 
-    //   1. elements selected have selected class
-    //   2. we are in state 4
-    // post:
-    //   1. one cell remains
-    //   2. we are in state 2
+    // public select(r : Rect) : void;
+    Table.prototype.deselect = function () {
+        if (!this.hasSelection) {
+            console.log("deselect: no selection.");
+            return;
+        }
+        var selection = sys.ArrayList.fromNodeList(this._table.querySelectorAll(".selected"));
+        selection.foreach(function (p) { return p.classList.remove("selected"); });
+        this._selection = null;
+    };
+    // merges selected cells
     Table.prototype.mergeCells = function () {
-        var left = Math.min(this.a.x, this.b.x);
-        var top = Math.min(this.a.y, this.b.y);
-        var top_left = this.grid.get(left, top);
-        top_left.classList.remove("selected");
-        var cells = Array.prototype.slice.call(this._table.querySelectorAll(".selected"));
-        for (var i = 0; i < cells.length; ++i) {
-            cells[i].parentNode.removeChild(cells[i]);
+        var _this = this;
+        if (!this.hasSelection) {
+            console.log("mergeCells: no selection.");
+            return;
         }
-        top_left.rowSpan = Math.abs(this.b.y - this.a.y) + 1;
-        top_left.colSpan = Math.abs(this.b.x - this.a.x) + 1;
-        this.b = null;
-        this.state = 2;
-        this.grid.update();
+        var selection = this._selection;
+        if (selection instanceof Point) {
+            console.log("Attempt to merge single cell, nothing to do.");
+        }
+        if (selection instanceof Rect) {
+            var sel = selection.normalize();
+            var prototype = this._grid.get(sel.p1);
+            var cells = sel.all().map(function (p) { return _this._grid.original(p); });
+            cells.removeAll(sel.p1, Point.comparator());
+            cells.removeDuplicates(Point.comparator());
+            cells.map(function (p) { return _this._grid.get(p); }).foreach(function (cell) { return cell.parentNode.removeChild(cell); });
+            prototype.colSpan = sel.width;
+            prototype.rowSpan = sel.height;
+            this._selection = sel.p1;
+            this._grid.update();
+        }
     };
-    // Split cells
-    // pre:
-    //  1. element selected has a colspan or rowspan > 1
-    //  2. we are in state 2
-    // post:
-    //  1. number of cells increase my how many atomic cells existed prior
-    //  2. we are in state 4
-    Table.prototype.splitCell = function () {
-        var cell = this.grid.get(this.a);
-        var start_row = this.a.y;
-        var start_col = this.a.x;
+    // splits selected cell into atomic cells
+    Table.prototype.splitCell = function (p) {
+        var location;
+        if (p === undefined) {
+            var maybecell = this._selection;
+            if (maybecell instanceof Point)
+                location = maybecell;
+            else {
+                console.log("splitCell called with selection as Rect, and without passing Point. Nothing to do.");
+                return;
+            }
+        }
+        else {
+            location = p;
+        }
+        var cell = this._grid.get(location);
+        var start_row = location.y;
+        var start_col = location.x;
         var colspan = cell.colSpan;
         var rowspan = cell.rowSpan;
+        if (colspan === 1 && rowspan === 1) {
+            console.log("splitCell: cell is already atomic. Nothing to do.");
+            return;
+        }
         var text = cell.textContent;
         var refcolumn = start_col + colspan;
-        if (refcolumn > this.grid.width)
+        if (refcolumn > this._grid.width)
             refcolumn = null;
         cell.parentNode.removeChild(cell);
         for (var i = start_row; i < start_row + rowspan; ++i) {
-            var row = this.tableElement.rows.item(i);
+            var row = this._table.rows.item(i);
             var refcell;
             var refcolumn2 = refcolumn;
             while (true) {
-                if (refcolumn2 === null || refcolumn2 >= this.grid.width) {
+                if (refcolumn2 === null || refcolumn2 >= this._grid.width) {
                     refcell = null;
                     break;
                 }
-                refcell = this.grid.get(refcolumn2, i);
+                refcell = this._grid.get(refcolumn2, i);
                 if (parseInt(refcell.dataset["top"]) === i) {
                     break;
                 }
@@ -643,193 +653,190 @@ var Table = (function () {
                 row.insertBefore(blankcell, refcell);
             }
         }
-        this.grid.update();
-        this.a = new Point(start_col, start_row);
-        this.b = new Point(start_col + colspan - 1, start_row + rowspan - 1);
-        this.state = 4;
+        this._grid.update();
+        this.select(new Rect(new Point(start_col, start_row), new Point(start_col + colspan - 1, start_row + rowspan - 1)));
+        this._grid.get(new Point(start_col, start_row)).textContent = text;
     };
-    Table.prototype.startEditing = function (cell) {
-        var element = this.grid.get(cell);
-        var div = element.querySelector("span");
-        div.contentEditable = "true";
-        div.focus();
-    };
-    Table.prototype.stopEditing = function (cell) {
-        var element = this.grid.get(cell);
-        var div = element.querySelector("span");
-        div.contentEditable = "false";
-        div.blur();
-    };
-    Table.prototype.clearCell = function (cell) {
-        var element = this.grid.get(cell);
-        var div = element.querySelector("span");
-        div.textContent = "";
-    };
-    Table.prototype.select = function (cell) {
-    };
-    Object.defineProperty(Table.prototype, "tableElement", {
-        get: function () {
-            return this._table;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Table.prototype, "grid", {
-        get: function () {
-            return this._grid;
-        },
-        set: function (value) {
-            this._grid = value;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Table.prototype, "a", {
-        get: function () {
-            return this._a;
-        },
-        set: function (value) {
-            if (value === null) {
-                this.old_a = this._a;
-                if (this.old_a !== null) {
-                    this.grid.get(this.old_a).classList.remove("selected");
-                }
-                this._a = null; // clearing
-            }
-            else {
-                if (value.x >= this.grid.width) {
-                    value.x = this.grid.width - 1;
-                }
-                if (value.y >= this.grid.height) {
-                    value.y = this.grid.height - 1;
-                }
-                if (value.x < 0) {
-                    value.x = 0;
-                }
-                if (value.y < 0) {
-                    value.y = 0;
-                }
-                this.old_a = this.a;
-                this._a = value;
-                if (this.old_a !== null) {
-                    this.grid.get(this.old_a).classList.remove("selected");
-                }
-                this.grid.get(this.a).classList.add("selected");
-                console.log("a = " + value.x + ", " + value.y);
-            }
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Table.prototype, "state", {
-        get: function () {
-            return this._state;
-        },
-        set: function (value) {
-            this.onStateChange(this._state, value);
-            this._state = value;
-            this.updateContextMenu();
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(Table.prototype, "b", {
-        get: function () {
-            return this._b;
-        },
-        set: function (value) {
-            if (value === null) {
-                this.old_b = this._b;
-                this._b = null;
-                if (this.old_b !== null) {
-                    this.grid.deselect(new Rect(this.a, this.old_b));
-                }
-                this.a = this.a; // make sure we are still selected
-            }
-            else {
-                if (value.x >= this.grid.width) {
-                    value.x = this.grid.width - 1;
-                }
-                if (value.y >= this.grid.height) {
-                    value.y = this.grid.height - 1;
-                }
-                if (value.x < 0) {
-                    value.x = 0;
-                }
-                if (value.y < 0) {
-                    value.y = 0;
-                }
-                this.old_b = this._b;
-                this._b = value;
-                // this is 'quick and dirty', could use proper dirty rectangles
-                if (this.old_b !== null) {
-                    this.grid.deselect(new Rect(this._a, this.old_b));
-                }
-                this.grid.select(new Rect(this.a, this.b));
-            }
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Table.prototype.deselectAll = function () {
-        for (var i = 0; i < this.grid.height; ++i) {
-            for (var j = 0; j < this.grid.width; ++j) {
-                this.grid.get(j, i).classList.remove("selected");
-            }
-        }
-    };
-    Table.prototype.onStateChange = function (from, to) {
-        if (from === 0 && to === 1) {
-            this._table.classList.add("selected");
-            //            this.grid.get(this.a).classList.add("selected");
+    Table.prototype.splitCells = function () {
+        var _this = this;
+        if (!this.hasSelection) {
+            console.log("splitCells: no selection.");
             return;
         }
-        if (to === 3) {
-            var body = document.getElementsByTagName("body").item(0);
-            body.classList.add("noselect");
-            window.addEventListener("mouseup", this._events.mouseUpEvent);
+        var selection = this._selection;
+        if (selection instanceof Point) {
+            if (this._grid.isSpanned(selection)) {
+                this.splitCell(selection);
+            }
         }
-        if (from === 3) {
-            var body = document.getElementsByTagName("body").item(0);
-            body.classList.remove("noselect");
-            window.removeEventListener("mouseup", this._events.mouseUpEvent);
+        else if (selection instanceof Rect) {
+            var spanned = selection.all().filter(function (x) { return _this._grid.isSpanned(x); }).map(function (x) { return _this._grid.original(x); });
+            spanned.removeDuplicates(Point.comparator());
+            spanned.foreach(function (p) { return _this.splitCell(p); });
         }
-        if (from === 1 && to === 2) {
-            // nothing to do, because 1 already selected a
+    };
+    // inserts row/column before/after selection
+    Table.prototype.insertRowAbove = function () {
+        if (!this.hasSelection) {
+            console.log("insertRowAbove: no selection.");
             return;
         }
-        if (from === 2 && to === 1) {
+        var selection = this._selection;
+        var row;
+        // find row...
+        if (selection instanceof Rect) {
+            row = selection.normalize().p1.y;
         }
-        if (from === 2 && to === 6) {
+        else if (selection instanceof Point) {
+            row = selection.y;
         }
-        if (from === 6 && to === 5) {
-            this.startEditing(this.a);
+        var newrow = this._table.insertRow(row);
+        for (var i = 0; i < this._grid.width; ++i) {
+            if (this._grid.isOriginal(i, row)) {
+                var cell = this._grid.get(i, row);
+                newrow.appendChild(DOM.cell(cell.rowSpan, cell.colSpan));
+            }
+            else {
+                if (this._grid.isOriginalSameColumn(i, row)) {
+                    this._grid.get(i, row).rowSpan++;
+                }
+            }
         }
-        if (from === 2 && to === 5) {
-            this.clearCell(this.a);
-            this.startEditing(this.a);
+        this._grid.update();
+        if (selection instanceof Rect) {
+            selection.p1.y++;
+            selection.p2.y++;
         }
-        if (from === 5 && to === 2) {
-            this.stopEditing(this.a);
+        else if (selection instanceof Point) {
+            selection.y++;
         }
-        if (from === 5 && to === 1) {
-            this.stopEditing(this.old_a);
+        this.select(selection);
+    };
+    Table.prototype.insertRowBelow = function () {
+        if (!this.hasSelection) {
+            console.log("insertRowBelow: no selection.");
+            return;
         }
-        if (to === 0) {
-            this.a = null;
-            this.deselectAll();
-            this._table.classList.remove("selected");
+        var selection = this._selection;
+        var row;
+        // find row...
+        if (selection instanceof Rect) {
+            // potentially erroneous assumption:
+            // that p2.y is guaranteed to be within the table, thus +1 can be at most == height
+            row = selection.normalize().p2.y + 1;
         }
+        else if (selection instanceof Point) {
+            row = selection.y + 1;
+        }
+        var newrow = this._table.insertRow(row);
+        for (var i = 0; i < this._grid.width; ++i) {
+            if (this._grid.isOriginal(i, row)) {
+                var cell = this._grid.get(i, row);
+                newrow.appendChild(DOM.cell(cell.rowSpan, cell.colSpan));
+            }
+            else {
+                if (this._grid.isOriginalSameColumn(i, row)) {
+                    this._grid.get(i, row).rowSpan++;
+                }
+            }
+        }
+        this._grid.update();
+    };
+    Table.prototype.insertColumnBefore = function () {
+        var _this = this;
+        var selection = this._selection;
+        var column_to_duplicate;
+        if (selection instanceof Point) {
+            column_to_duplicate = selection.x;
+        }
+        else if (selection instanceof Rect) {
+            column_to_duplicate = selection.left;
+        }
+        var column = new Rect(new Point(column_to_duplicate, 0), new Point(column_to_duplicate, this._grid.height - 1));
+        // three types of cells:
+        // type A: cells with colspan 1		
+        var cellsA = column.all().filter(function (x) { return _this._grid.get(x).colSpan === 1; }).map(function (x) { return _this._grid.original(x); });
+        // type B: cells with colspan > 1 starting in column
+        var cellsB = column.all().filter(function (x) { return _this._grid.get(x).colSpan !== 1; }).filter(function (x) { return _this._grid.isOriginalSameColumn(x); }).map(function (x) { return _this._grid.original(x); });
+        // type C: cells with colspan > 1 starting before column
+        var cellsC = column.all().filter(function (x) { return _this._grid.get(x).colSpan !== 1; }).filter(function (x) { return !_this._grid.isOriginalSameColumn(x); }).map(function (x) { return _this._grid.original(x); });
+        cellsA.removeDuplicates(Point.comparator());
+        cellsB.removeDuplicates(Point.comparator());
+        cellsC.removeDuplicates(Point.comparator());
+        // A: colspan 1 -> duplicate
+        cellsA.map(function (x) { return _this._grid.get(x); }).foreach(function (x) {
+            var cell = DOM.cell(x.rowSpan, x.colSpan);
+            x.parentNode.insertBefore(cell, x);
+        });
+        // B: starting in column -> replace with individual cells
+        cellsB.foreach(function (x) {
+            var originalCell = _this._grid.get(x);
+            var cell = DOM.cell(originalCell.rowSpan, 1);
+            originalCell.parentNode.insertBefore(cell, originalCell);
+            // still to do: split the cell - will do that after updating grid
+        });
+        // C: increase colspan by 1
+        cellsC.map(function (x) { return _this._grid.get(x); }).foreach(function (x) {
+            x.colSpan++;
+        });
+        this._grid.update();
+        cellsB.foreach(function (x) { return _this.splitCell(x); });
+    };
+    Table.prototype.insertColumnAfter = function () {
+        var _this = this;
+        var selection = this._selection;
+        var column_to_duplicate;
+        if (selection instanceof Point) {
+            column_to_duplicate = selection.x;
+        }
+        else if (selection instanceof Rect) {
+            column_to_duplicate = selection.left;
+        }
+        var column = new Rect(new Point(column_to_duplicate, 0), new Point(column_to_duplicate, this._grid.height - 1));
+        // three types of cells:
+        // type A: cells with colspan 1		
+        var cellsA = column.all().filter(function (x) { return _this._grid.get(x).colSpan === 1; }).map(function (x) { return _this._grid.original(x); });
+        // type B: cells with colspan > 1 end in column
+        var cellsB = column.all().filter(function (x) { return _this._grid.get(x).colSpan !== 1; }).filter(function (x) { return _this._grid.right(x) === column_to_duplicate; }).map(function (x) { return _this._grid.original(x); });
+        // type C: cells with colspan > 1 ending after column
+        var cellsC = column.all().filter(function (x) { return _this._grid.get(x).colSpan !== 1; }).filter(function (x) { return _this._grid.right(x) > column_to_duplicate; }).map(function (x) { return _this._grid.original(x); });
+        cellsA.removeDuplicates(Point.comparator());
+        cellsB.removeDuplicates(Point.comparator());
+        cellsC.removeDuplicates(Point.comparator());
+        // last edit
+        // A: colspan 1 -> duplicate
+        cellsA.map(function (x) { return _this._grid.get(x); }).foreach(function (x) {
+            var cell = DOM.cell(x.rowSpan, x.colSpan);
+            x.parentNode.insertBefore(cell, x);
+        });
+        // B: starting in column -> replace with individual cells
+        cellsB.foreach(function (x) {
+            var originalCell = _this._grid.get(x);
+            var cell = DOM.cell(originalCell.rowSpan, 1);
+            originalCell.parentNode.insertBefore(cell, originalCell);
+            // still to do: split the cell - will do that after updating grid
+        });
+        // C: increase colspan by 1
+        cellsC.map(function (x) { return _this._grid.get(x); }).foreach(function (x) {
+            x.colSpan++;
+        });
+        this._grid.update();
+        cellsB.foreach(function (x) { return _this.splitCell(x); });
     };
     return Table;
 })();
 /// <reference path="utilities.ts"/>
-/// <reference path="table.ts"/>
+/// <reference path="table2.ts"/>
 var Editor;
 (function (Editor) {
+    Editor.table;
     function _start() {
-        var table = new Table(document.querySelector(".table_div"), 6, 6, 1, 1);
+        Editor.table = new Table(document.querySelector(".table_div"), 6, 6);
         console.log("Table Selector Start");
+        Editor.table.select(new Rect(new Point(1, 1), new Point(2, 2)));
+        Editor.table.mergeCells();
+        Editor.table.select(new Point(2, 0));
+        Editor.table.insertColumnBefore();
     }
     Editor._start = _start;
 })(Editor || (Editor = {}));

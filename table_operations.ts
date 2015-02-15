@@ -3,6 +3,8 @@ class TableOperations {
 	public constructor(public table : Table) {
 		document.querySelector("#merge_cells").addEventListener("click",
 			this.merge_cells, true);
+		document.querySelector("#add_row_above").addEventListener("click",
+			this.add_row_above, true);
 
 		// prevent buttons from triggering deselection of table
 		document.querySelector(".toolbar").addEventListener("mousedown",
@@ -17,7 +19,10 @@ class TableOperations {
 	}
 
 	private add_row_above = (e : MouseEvent) => {
-		console.log("add row above");
+		if (this.table.state === 2) {
+			console.log("add row above");
+			this.table.addRowAbove();
+		}
 		return false;
 	}
 
