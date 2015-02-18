@@ -122,6 +122,11 @@ module TableGrid {
             } // otherwise x and y
             var x : number = arguments[0];
             var y : number = arguments[1];
+            if (y > this._grid.length) {
+                throw "Grid::get: y is greater than height";
+            } else if (x > this._grid[y].length) {
+                throw "Grid::get: x is greater than width";
+            }
             return this._grid[y][x];
         }
 

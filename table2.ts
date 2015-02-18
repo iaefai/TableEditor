@@ -369,16 +369,29 @@ class Table {
 // last edit
 
 		// A: colspan 1 -> duplicate
-		cellsA.map(x => this._grid.get(x)).foreach(x => {
-			var cell = DOM.cell(x.rowSpan, x.colSpan);
-			x.parentNode.insertBefore(cell, x);
+		cellsA.foreach(p => {
+			var cell = this._grid.get(p);
+			var newcell = DOM.cell(cell.rowSpan, cell.colSpan);
+			if (p.x+1 >= this._grid.width) {
+				cell.parentNode.insertBefore(newcell);
+			} else {
+				p.x++;
+				cell.parentNode.insertBefore(newcell, 
+					this._grid.get(p));
+			}
 		});
 
-		// B: starting in column -> replace with individual cells
-		cellsB.foreach(x => {
-			var originalCell = this._grid.get(x);
-			var cell = DOM.cell(originalCell.rowSpan, 1); 
-			originalCell.parentNode.insertBefore(cell, originalCell);			
+		// B: ending in column -> replace with individual cells
+		cellsB.foreach(p => {
+			var cell = this._grid.get(p);
+			var newcell = DOM.cell(cell.rowSpan, 1); 
+			if (p.x+1 >= this._grid.width) {
+				cell.parentNode.insertBefore(newcell);
+			} else {
+				p.x++;
+				cell.parentNode.insertBefore(newcell, 
+					this._grid.get(p));
+			}
 			// still to do: split the cell - will do that after updating grid
 		});
 
@@ -389,11 +402,112 @@ class Table {
 
 		this._grid.update();
 		
-		cellsB.foreach(x => this.splitCell(x));
+		cellsB.map(p => { p.x++; return p; }).foreach(p => this.splitCell(p));
 	}
 
-	// public deleteRow() : void;
-	// public deleteColumn() : void;
+	public deleteRows() : void {
+		if (!this.hasSelection) {
+			console.log("deleteRows: No selection.");
+		}
+
+		var selection = this._selection;
+
+		if (selection instanceof Point) {
+			this.deleteRow(selection.y);
+		} else if (selection instanceof Rect) {
+			var range = sys.range(selection.p1.y, selection.p2.y);
+
+			range.foreach(i => this.deleteRow(i));
+		}	
+	}
+
+	private deleteRow(i : number) : void {
+		var all = sys.range(0, this._grid.width-1, 1);
+
+		// obtain original cell instance
+		var cells = all.map(index => new Point(index, i))
+			.map(p => this._grid.original(p)) // should remove duplicates...
+			.map(p => this._grid.get(p))
+
+
+
+		// cells that start on this row (i)
+		var cellsA = cells.filter(cell => parseInt(cell.dataset["top"]) === i);
+		// cells that do not start on this row 
+		var cellsB = cells.filter(cell => parseInt(cell.dataset["top"]) !== i);
+		
+		// cells that start on this row, and have a rowspan > 1
+		var cellsA2 = cellsA.filter(cell => cell.rowSpan > 1);
+
+		// cells that do not start ont his row are by definition more than one row
+		// therefore decrease their rowpsan
+		cellsB.foreach(cell => cell.rowSpan--);
+
+		// cells that start out on this row, but are multirow must be moved to the next row
+		cellsA2.foreach(cell => {
+			cell.parentNode.removeChild(cell);
+			cell.rowSpan--;
+			var top = i+1;
+			var left = parseInt(cell.dataset["left"]);
+			cell.dataset["top"] = top;
+			left+=cell.colSpan;
+
+			var next : HTMLTableCellElement = null;
+
+			// find place to insert it - that is: 
+			//  the first entry whose original is on the same row
+			for (var i = left; i < this._grid.width; i++) {
+				var nxt = this._grid.original(new Point(i, top));
+				if (nxt.y === top) {
+					next = this._grid.get(nxt);
+					break;
+				}
+			}
+
+			this._table.rows.item(top).insertBefore(cell, next);
+		});
+
+		this._table.deleteRow(i);
+		this._grid.update();
+	}
+
+	public deleteColumns() : void {
+		if (!this.hasSelection) {
+			console.log("deleteColumns: No selection.");
+		}
+
+		var selection = this._selection;
+
+		if (selection instanceof Point) {
+			this.deleteColumn(selection.x);
+		} else if (selection instanceof Rect) {
+			var range = sys.range(selection.p1.x, selection.p2.x);
+
+			range.foreach(i => this.deleteColumn(i));
+		}	
+	}
+
+	private deleteColumn(i : number) : void {
+		var all = sys.range(0, this._grid.height-1, 1);
+
+		var points = all.map(row => new Point(i, row));
+		var originalPoints = points.map(cell => this._grid.original(cell));
+		originalPoints.removeDuplicates(Point.comparator());
+
+		var cells = originalPoints.map(point => this._grid.get(point));
+
+		// cells that are only in this column
+		var cellsA = cells.filter(cell => cell.colSpan === 1);
+		// cells that are in more than this column
+		var cellsB = cells.filter(cell => cell.colSpan !== 1);
+
+		// delete cells that are only in this column
+		cellsA.foreach(cell => cell.parentNode.removeChild(cell));
+
+		// reduece colspan of the rest
+		cellsB.foreach(cell => cell.colSpan--);
+		this._grid.update();
+	}
 
 	// edit cell selected (invalid in multiselection)
 	// public edit() : void;

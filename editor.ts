@@ -1,17 +1,43 @@
 /// <reference path="utilities.ts"/>
 /// <reference path="table2.ts"/>
 
+// ace
+declare module editor {
+	export function getValue() : string;
+}
+
 module Editor {
 	export var table : Table;
 
-	export function _start() : void {
-		Editor.table = new Table(document.querySelector(".table_div"), 6, 6);
-		console.log("Table Selector Start");
+	export function createTable(rows : number, cols : number) : void {
+		var node = document.querySelector(".table_div");
 
-		Editor.table.select(new Rect(new Point(1,1), new Point(2,2)));
-		Editor.table.mergeCells();
-		Editor.table.select(new Point(2, 0));
-		Editor.table.insertColumnBefore();
+		while (node.firstChild) {
+			node.removeChild(node.firstChild);
+		}
+
+		Editor.table = new Table(document.querySelector(".table_div"), rows, cols);
+	}
+
+	export function _start() : void {
+		Editor.createTable(6, 6);
+
+		document.getElementById("buttonReset").addEventListener("click",
+			e => {
+				Editor.createTable(6, 6);
+			});
+
+		document.getElementById("buttonExecute").addEventListener("click",
+			e => {
+				try {
+					document.getElementById("errors").innerHTML = "";
+					eval(editor.getValue());
+				} catch (e) {
+					document.getElementById("errors").innerHTML = e.message;
+				}
+			});
+
+
 	}
 }
 

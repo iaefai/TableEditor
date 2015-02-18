@@ -1,5 +1,14 @@
 var sys;
 (function (sys) {
+    function range(from, to, step) {
+        if (step === void 0) { step = 1; }
+        var list = new ArrayList();
+        for (var i = from; i <= to; i += step) {
+            list.append(i);
+        }
+        return list;
+    }
+    sys.range = range;
     var ArrayList = (function () {
         function ArrayList(items) {
             if (items === undefined) {
@@ -407,6 +416,12 @@ var TableGrid;
             } // otherwise x and y
             var x = arguments[0];
             var y = arguments[1];
+            if (y > this._grid.length) {
+                throw "Grid::get: y is greater than height";
+            }
+            else if (x > this._grid[y].length) {
+                throw "Grid::get: x is greater than width";
+            }
             return this._grid[y][x];
         };
         Grid.prototype.isSpanned = function () {
@@ -805,15 +820,28 @@ var Table = (function () {
         cellsC.removeDuplicates(Point.comparator());
         // last edit
         // A: colspan 1 -> duplicate
-        cellsA.map(function (x) { return _this._grid.get(x); }).foreach(function (x) {
-            var cell = DOM.cell(x.rowSpan, x.colSpan);
-            x.parentNode.insertBefore(cell, x);
+        cellsA.foreach(function (p) {
+            var cell = _this._grid.get(p);
+            var newcell = DOM.cell(cell.rowSpan, cell.colSpan);
+            if (p.x + 1 >= _this._grid.width) {
+                cell.parentNode.insertBefore(newcell);
+            }
+            else {
+                p.x++;
+                cell.parentNode.insertBefore(newcell, _this._grid.get(p));
+            }
         });
-        // B: starting in column -> replace with individual cells
-        cellsB.foreach(function (x) {
-            var originalCell = _this._grid.get(x);
-            var cell = DOM.cell(originalCell.rowSpan, 1);
-            originalCell.parentNode.insertBefore(cell, originalCell);
+        // B: ending in column -> replace with individual cells
+        cellsB.foreach(function (p) {
+            var cell = _this._grid.get(p);
+            var newcell = DOM.cell(cell.rowSpan, 1);
+            if (p.x + 1 >= _this._grid.width) {
+                cell.parentNode.insertBefore(newcell);
+            }
+            else {
+                p.x++;
+                cell.parentNode.insertBefore(newcell, _this._grid.get(p));
+            }
             // still to do: split the cell - will do that after updating grid
         });
         // C: increase colspan by 1
@@ -821,7 +849,90 @@ var Table = (function () {
             x.colSpan++;
         });
         this._grid.update();
-        cellsB.foreach(function (x) { return _this.splitCell(x); });
+        cellsB.map(function (p) {
+            p.x++;
+            return p;
+        }).foreach(function (p) { return _this.splitCell(p); });
+    };
+    Table.prototype.deleteRows = function () {
+        var _this = this;
+        if (!this.hasSelection) {
+            console.log("deleteRows: No selection.");
+        }
+        var selection = this._selection;
+        if (selection instanceof Point) {
+            this.deleteRow(selection.y);
+        }
+        else if (selection instanceof Rect) {
+            var range = sys.range(selection.p1.y, selection.p2.y);
+            range.foreach(function (i) { return _this.deleteRow(i); });
+        }
+    };
+    Table.prototype.deleteRow = function (i) {
+        var _this = this;
+        var all = sys.range(0, this._grid.width - 1, 1);
+        // obtain original cell instance
+        var cells = all.map(function (index) { return new Point(index, i); }).map(function (p) { return _this._grid.original(p); }).map(function (p) { return _this._grid.get(p); });
+        // cells that start on this row (i)
+        var cellsA = cells.filter(function (cell) { return parseInt(cell.dataset["top"]) === i; });
+        // cells that do not start on this row 
+        var cellsB = cells.filter(function (cell) { return parseInt(cell.dataset["top"]) !== i; });
+        // cells that start on this row, and have a rowspan > 1
+        var cellsA2 = cellsA.filter(function (cell) { return cell.rowSpan > 1; });
+        // cells that do not start ont his row are by definition more than one row
+        // therefore decrease their rowpsan
+        cellsB.foreach(function (cell) { return cell.rowSpan--; });
+        // cells that start out on this row, but are multirow must be moved to the next row
+        cellsA2.foreach(function (cell) {
+            cell.parentNode.removeChild(cell);
+            cell.rowSpan--;
+            var top = i + 1;
+            var left = parseInt(cell.dataset["left"]);
+            cell.dataset["top"] = top;
+            left += cell.colSpan;
+            var next = null;
+            for (var i = left; i < _this._grid.width; i++) {
+                var nxt = _this._grid.original(new Point(i, top));
+                if (nxt.y === top) {
+                    next = _this._grid.get(nxt);
+                    break;
+                }
+            }
+            _this._table.rows.item(top).insertBefore(cell, next);
+        });
+        this._table.deleteRow(i);
+        this._grid.update();
+    };
+    Table.prototype.deleteColumns = function () {
+        var _this = this;
+        if (!this.hasSelection) {
+            console.log("deleteColumns: No selection.");
+        }
+        var selection = this._selection;
+        if (selection instanceof Point) {
+            this.deleteColumn(selection.x);
+        }
+        else if (selection instanceof Rect) {
+            var range = sys.range(selection.p1.x, selection.p2.x);
+            range.foreach(function (i) { return _this.deleteColumn(i); });
+        }
+    };
+    Table.prototype.deleteColumn = function (i) {
+        var _this = this;
+        var all = sys.range(0, this._grid.height - 1, 1);
+        var points = all.map(function (row) { return new Point(i, row); });
+        var originalPoints = points.map(function (cell) { return _this._grid.original(cell); });
+        originalPoints.removeDuplicates(Point.comparator());
+        var cells = originalPoints.map(function (point) { return _this._grid.get(point); });
+        // cells that are only in this column
+        var cellsA = cells.filter(function (cell) { return cell.colSpan === 1; });
+        // cells that are in more than this column
+        var cellsB = cells.filter(function (cell) { return cell.colSpan !== 1; });
+        // delete cells that are only in this column
+        cellsA.foreach(function (cell) { return cell.parentNode.removeChild(cell); });
+        // reduece colspan of the rest
+        cellsB.foreach(function (cell) { return cell.colSpan--; });
+        this._grid.update();
     };
     return Table;
 })();
@@ -830,13 +941,28 @@ var Table = (function () {
 var Editor;
 (function (Editor) {
     Editor.table;
+    function createTable(rows, cols) {
+        var node = document.querySelector(".table_div");
+        while (node.firstChild) {
+            node.removeChild(node.firstChild);
+        }
+        Editor.table = new Table(document.querySelector(".table_div"), rows, cols);
+    }
+    Editor.createTable = createTable;
     function _start() {
-        Editor.table = new Table(document.querySelector(".table_div"), 6, 6);
-        console.log("Table Selector Start");
-        Editor.table.select(new Rect(new Point(1, 1), new Point(2, 2)));
-        Editor.table.mergeCells();
-        Editor.table.select(new Point(2, 0));
-        Editor.table.insertColumnBefore();
+        Editor.createTable(6, 6);
+        document.getElementById("buttonReset").addEventListener("click", function (e) {
+            Editor.createTable(6, 6);
+        });
+        document.getElementById("buttonExecute").addEventListener("click", function (e) {
+            try {
+                document.getElementById("errors").innerHTML = "";
+                eval(editor.getValue());
+            }
+            catch (e) {
+                document.getElementById("errors").innerHTML = e.message;
+            }
+        });
     }
     Editor._start = _start;
 })(Editor || (Editor = {}));

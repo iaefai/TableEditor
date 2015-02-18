@@ -3,6 +3,16 @@ module sys {
 
     export type comparator = <T>(x : T, y : T) => number;
 
+    export function range(from : number, to : number, step : number = 1) : ArrayList<number> {
+        var list = new ArrayList<number>();
+
+        for (var i = from; i <= to; i+=step) {
+            list.append(i);
+        }
+
+        return list;
+    }
+
     export class ArrayList<T> {
         private _data : Array<T>;
 

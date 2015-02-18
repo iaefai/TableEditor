@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Table Editor Demo</title>
+	<link href="demo.css" type="text/css" rel="stylesheet">
+	<link href="table.css" type="text/css" rel="stylesheet">
+	<style type="text/css" media="screen">
+    #editor { 
+        /*position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;*/
+
+        width: 40rem;
+        height: 10rem;
+    }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+    <button class="main_op" id="add_row_above">Add Row Above</button>
+    <button class="main_op" id="add_row_below">Add Row Below</button>
+    <button class="main_op" id="add_col_before">Add Column Before</button>
+    <button class="main_op" id="add_col_after">Add Column After</button>
+    <button class="main_op" id="delete_row">Delete Row</button>
+    <button class="main_op" id="delete_col">Delete Column</button>	
+    <button id="merge_cells">Merge Cells</button>
+</div>
+<div class="table_div">
+</div>
+
+<div id="editor">
+		Editor.table.select(new Rect(new Point(1,1), new Point(2,2)));
+		Editor.table.mergeCells();
+		Editor.table.select(new Point(2, 0));
+		Editor.table.insertColumnBefore();
+</div>
+<input id="buttonExecute" onclick="eval(editor.getValue());" 
+	type="button" value="Execute">
+<input id="buttonReset" type="button" value="Reset Table">
+
+<div id="errors">
+</div>
+
+<div id="markdown">
+
+API
+=======
+
+> Editor.createTable(rows, cols)
+
+Creates a new table (replaces existing) with number of rows and columns, filled with random text.
+
+> Editor.table
+
+Accesses the table API:
+
+> new Point(x, y)
+
+Creates a new Point
+
+> new Rect(new Point(x1, y1), new Point(x2, y2))
+
+Creates a new Rect
+
+> Editor.table.select(point or rect)
+
+Selects part of the table, using a point or a rect (see the last two entries for how to create them).
+
+> Editor.table.deselect()
+
+Removes all selection
+
+> Editor.table.mergeCells()
+
+Merges the current selection into one cell
+
+> Editor.table.splitCells()
+
+Splits the current selection into atomic cells (rowspan and colspan all 1)
+
+> Editor.table.insertRowAbove()
+
+> Editor.table.insertRowBelow()
+
+Inserts a row above/below the current selection
+
+> Editor.table.insertColumnBefore()
+
+> Editor.table.insertcolumnAfter()
+
+Inserts a column before/after the current selection
+
+> Editor.table.deleteColumns()
+
+> Editor.table.deleteRows()
+
+Deletes the selected columns or rows, based on the current selection.
+
+
+
+
+
+
+</div>
+
+
+<script src="mousetrap.min.js" type="application/ecmascript"></script>
+<script src="editor.js" type="application/ecmascript"></script>
+
+<script src="markdown.min.js" type="application/ecmascript"></script>
+
+<script src="ace/ace.js" type="text/javascript" charset="utf-8"></script>
+<script>
+	var editor = ace.edit("editor");
+	editor.setTheme("ace/theme/monokai");
+	editor.getSession().setMode("ace/mode/javascript");
+
+	var container = document.querySelector("#markdown");
+	container.innerHTML = markdown.toHTML(container.textContent);
+</script>
+
+
+</body>
+</html>
