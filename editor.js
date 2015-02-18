@@ -315,7 +315,7 @@ var DOM;
         cell.appendChild(span);
         cell.colSpan = colspan;
         cell.rowSpan = rowspan;
-        span.textContent = randomText(5);
+        span.textContent = ""; // randomText(5);
         return cell;
     }
     DOM.cell = cell;
