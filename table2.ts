@@ -561,6 +561,39 @@ class Table {
 		this._grid.update();
 	}
 
+	public clearCells() : void {
+		for (var i = 0; i < this._grid.width; ++i) {
+			for (var j = 0; j < this._grid.height; ++j) {
+				var p = new Point(i, j);
+				if (this._grid.isOriginal(p)) {
+					var cell = this._grid.get(p);
+					cell.textContent = "";
+				}
+			}
+		}
+	}
+
+	public putCoords() : void {
+		for (var i = 0; i < this._grid.width; ++i) {
+			for (var j = 0; j < this._grid.height; ++j) {
+				var p = new Point(i, j);
+				if (this._grid.isOriginal(p)) {
+					var cell = this._grid.get(p);
+					cell.textContent = `${i}, ${j}`;
+				}
+			}
+		}
+	}
+
+	public setText(x : number, y : number, text : string) {
+		if (x >= 0 && x < this._grid.width &&
+			y >= 0 && y < this._grid.height) {
+			this._grid.get(new Point(x, y)).textContent = text;
+		} else {
+			throw "setText(): point out of range.";
+		}
+	}
+
 	// edit cell selected (invalid in multiselection)
 	// public edit() : void;
 

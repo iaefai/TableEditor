@@ -986,6 +986,36 @@ var Table = (function () {
         cellsB.foreach(function (cell) { return cell.colSpan--; });
         this._grid.update();
     };
+    Table.prototype.clearCells = function () {
+        for (var i = 0; i < this._grid.width; ++i) {
+            for (var j = 0; j < this._grid.height; ++j) {
+                var p = new Point(i, j);
+                if (this._grid.isOriginal(p)) {
+                    var cell = this._grid.get(p);
+                    cell.textContent = "";
+                }
+            }
+        }
+    };
+    Table.prototype.putCoords = function () {
+        for (var i = 0; i < this._grid.width; ++i) {
+            for (var j = 0; j < this._grid.height; ++j) {
+                var p = new Point(i, j);
+                if (this._grid.isOriginal(p)) {
+                    var cell = this._grid.get(p);
+                    cell.textContent = "" + i + ", " + j;
+                }
+            }
+        }
+    };
+    Table.prototype.setText = function (x, y, text) {
+        if (x >= 0 && x < this._grid.width && y >= 0 && y < this._grid.height) {
+            this._grid.get(new Point(x, y)).textContent = text;
+        }
+        else {
+            throw "setText(): point out of range.";
+        }
+    };
     return Table;
 })();
 /// <reference path="utilities.ts"/>
@@ -999,6 +1029,7 @@ var Editor;
             node.removeChild(node.firstChild);
         }
         Editor.table = new Table(document.querySelector(".table_div"), rows, cols);
+        Editor.table.putCoords();
     }
     Editor.createTable = createTable;
     function _start() {

@@ -25,3 +25,7 @@ blockquote {
  #errors:empty {
  	display: none;
  }
+
+ td:empty {
+ 	height: 1rem;
+ }

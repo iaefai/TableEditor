@@ -17,6 +17,7 @@ module Editor {
 		}
 
 		Editor.table = new Table(document.querySelector(".table_div"), rows, cols);
+		Editor.table.putCoords();
 	}
 
 	export function _start() : void {
