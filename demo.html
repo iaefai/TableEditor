@@ -33,10 +33,10 @@
 </div>
 
 <div id="editor">
-		Editor.table.select(new Rect(new Point(1,1), new Point(2,2)));
-		Editor.table.mergeCells();
-		Editor.table.select(new Point(2, 0));
-		Editor.table.insertColumnBefore();
+Editor.table.select(1, 1, 2, 2);
+Editor.table.mergeCells();
+Editor.table.select(new Point(2, 0));
+Editor.table.insertColumnBefore();	
 </div>
 <input id="buttonExecute" type="button" value="Execute">
 <input id="buttonReset" type="button" value="Reset Table">
@@ -64,9 +64,18 @@ Creates a new Point
 
 Creates a new Rect
 
-> Editor.table.select(point or rect)
+> Editor.table.select(x, y);
 
-Selects part of the table, using a point or a rect (see the last two entries for how to create them).
+> Editor.table.select(x1, y1, x2, y2);
+
+> Editor.table.select(point1, point2);
+
+> Editor.table.select(point);
+
+> Editor.table.select(rect);
+
+Selects a single cell (x,y or point), or a range of cells (x1, y1) to (x2, y2), point1 to point2, or rect.
+To create a point or a rect see the previous entry.
 
 > Editor.table.deselect()
 

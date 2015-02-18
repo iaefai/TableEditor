@@ -33,7 +33,11 @@ module Editor {
 					document.getElementById("errors").innerHTML = "";
 					eval(editor.getValue());
 				} catch (e) {
-					document.getElementById("errors").innerHTML = e.message;
+					if (typeof e === "string") {
+						document.getElementById("errors").textContent = "Info: " + e;
+					} else {
+						document.getElementById("errors").innerHTML = "Bug: " + e.message;
+					}
 				}
 			});
 

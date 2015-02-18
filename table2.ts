@@ -27,34 +27,70 @@ class Table {
 		return this._selection !== null;
 	}
 
-	public select(p : Point|Rect) : void {
+	public select(x : number, y : number) : void;
+	public select(x1 : number, y1 : number, x2 : number, y2 : number) : void;
+	public select(p1 : Point, p2 : Point) : void;
+	public select(p : Point) : void;
+	public select(r : Rect) : void;
+	public select() : void {
+		if (arguments.length === 2) {
+			if (arguments[0] instanceof Point) {
+				var p1 : Point = arguments[0];
+				var p2 : Point = arguments[1];
+			} else {
+				var p : Point = new Point(arguments[0], arguments[1]);
+			} 
+		} else if (arguments.length === 4) {
+			var p1 : Point = new Point(arguments[0], arguments[1]);
+			var p2 : Point = new Point(arguments[2], arguments[3]);
+		} else { // === 1
+			if (arguments[0] instanceof Point) {
+				var p : Point = arguments[0];
+			} else if (arguments[0] instanceof Rect) {
+				var p1 : Point = arguments[0].p1;
+				var p2 : Point = arguments[0].p2;
+			} else {
+				throw "select(): invalid argument";
+			}
+		}
+
 		this.deselect();
-		
-		this._selection = p;
 
-		if (p instanceof Rect) {
-			var left = p.all().map(x => this._grid.left(x)).foldr1(sys.Functions.min);
-			var top = p.all().map(x => this._grid.top(x)).foldr1(sys.Functions.min);
-			var right = p.all().map(x => this._grid.right(x)).foldr1(sys.Functions.max);
-			var bottom = p.all().map(x => this._grid.bottom(x)).foldr1(sys.Functions.max);
+		if (p) {
+			if (p.x >= 0 && p.x < this._grid.width 
+				&& p.y >= 0 && p.y < this._grid.height) {
+				this._selection = p;
 
-			var selection = new Rect(new Point(left, top), new Point(right, bottom));			
+				this._grid.get(p).classList.add("selected");
+			} else {
+				throw "select(): point out of bounds";
+			}
+		} else if (p1) {
+			if (p1.x >= 0 && p1.x < this._grid.width 
+				&& p1.y >= 0 && p1.y < this._grid.height 
+				&& p2.x >= 0 && p2.x < this._grid.width 
+				&& p2.y >= 0 && p2.y < this._grid.height) {
+				var rect = new Rect(p1, p2);
 
-			selection.all().foreach(p => {
-					this._grid.get(p).classList.add("selected");
-					});
-			this._selection = selection;
+				var left = rect.all().map(x => this._grid.left(x)).foldr1(sys.Functions.min);
+				var top = rect.all().map(x => this._grid.top(x)).foldr1(sys.Functions.min);
+				var right = rect.all().map(x => this._grid.right(x)).foldr1(sys.Functions.max);
+				var bottom = rect.all().map(x => this._grid.bottom(x)).foldr1(sys.Functions.max);
+  
+				var selection = new Rect(new Point(left, top), new Point(right, bottom));			
 
-		} else if (p instanceof Point) {
-			this._grid.get(p).classList.add("selected");
-		}		
-
+				selection.all().foreach(p => {
+						this._grid.get(p).classList.add("selected");
+						});
+				this._selection = selection;	
+			} else {
+				throw "select(): rect out of bounds";
+			}
+		}
 	}
-	// public select(r : Rect) : void;
 
 	public deselect() : void {
 		if (!this.hasSelection) {
-			console.log("deselect: no selection.");
 			return;
 		}
 
@@ -68,7 +104,7 @@ class Table {
 	// merges selected cells
 	public mergeCells() : void {
 		if (!this.hasSelection) {
-			console.log("mergeCells: no selection.");
+			throw "mergeCells(): nothing selected";
 			return;
 		}
 
@@ -171,7 +207,7 @@ class Table {
 
 	public splitCells() : void {
 		if (!this.hasSelection) {
-			console.log("splitCells: no selection.");
+			throw "splitCells(): nothing selected.";
 			return;
 		}
 
@@ -194,8 +230,7 @@ class Table {
 	// inserts row/column before/after selection
 	public insertRowAbove() : void {
 		if (!this.hasSelection) {
-			console.log("insertRowAbove: no selection.");
-			return;
+			throw "insertRowAbove(): nothing selected.";
 		}
 
 		var selection = this._selection;
@@ -227,18 +262,17 @@ class Table {
         if (selection instanceof Rect) {
         	selection.p1.y++;
         	selection.p2.y++;
+        	this.select(selection);
         } else if (selection instanceof Point) {
         	selection.y++;
+        	this.select(selection);
         }
-         
-        this.select(selection);
 	}
 
 
 	public insertRowBelow() : void {
 		if (!this.hasSelection) {
-			console.log("insertRowBelow: no selection.");
-			return;
+			throw "insertRowBelow: nothing selected.";
 		}
 
 		var selection = this._selection;
@@ -271,6 +305,10 @@ class Table {
 	}
 
 	public insertColumnBefore() : void {
+		if (!this.hasSelection) {
+			throw "insertColumnBefore: nothing selected.";
+		}
+
 		var selection = this._selection;
 
 		var column_to_duplicate : number;
@@ -331,6 +369,10 @@ class Table {
 	}	
 
 	public insertColumnAfter() : void {
+		if (!this.hasSelection) {
+			throw "insertColumnAfter: nothing selected.";
+		}
+
 		var selection = this._selection;
 
 		var column_to_duplicate : number;
@@ -365,8 +407,6 @@ class Table {
 		cellsA.removeDuplicates(Point.comparator());
 		cellsB.removeDuplicates(Point.comparator());
 		cellsC.removeDuplicates(Point.comparator());
-		
-// last edit
 
 		// A: colspan 1 -> duplicate
 		cellsA.foreach(p => {
@@ -407,13 +447,19 @@ class Table {
 
 	public deleteRows() : void {
 		if (!this.hasSelection) {
-			console.log("deleteRows: No selection.");
+			throw "deleteRows(): nothing selected.";
 		}
 
 		var selection = this._selection;
 
 		if (selection instanceof Point) {
-			this.deleteRow(selection.y);
+			var cell = this._grid.get(selection);
+			if (cell.rowSpan !== 1) {
+				var range = sys.range(this._grid.top(selection), this._grid.bottom(selection));
+				range.foreach(i => this.deleteRow(i));
+			} else {
+				this.deleteRow(selection.y);
+			}
 		} else if (selection instanceof Rect) {
 			var range = sys.range(selection.p1.y, selection.p2.y);
 
@@ -473,13 +519,19 @@ class Table {
 
 	public deleteColumns() : void {
 		if (!this.hasSelection) {
-			console.log("deleteColumns: No selection.");
+			throw "deleteColumns: nothing selected.";
 		}
 
 		var selection = this._selection;
 
 		if (selection instanceof Point) {
-			this.deleteColumn(selection.x);
+			var cell = this._grid.get(selection);
+			if (cell.colSpan !== 1) {
+				var range = sys.range(this._grid.left(selection), this._grid.right(selection));
+				range.foreach(i => this.deleteColumn(i));
+			} else {
+			 	this.deleteColumn(selection.x);
+			}
 		} else if (selection instanceof Rect) {
 			var range = sys.range(selection.p1.x, selection.p2.x);
 

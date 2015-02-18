@@ -566,29 +566,63 @@ var Table = (function () {
         enumerable: true,
         configurable: true
     });
-    Table.prototype.select = function (p) {
+    Table.prototype.select = function () {
         var _this = this;
-        this.deselect();
-        this._selection = p;
-        if (p instanceof Rect) {
-            var left = p.all().map(function (x) { return _this._grid.left(x); }).foldr1(sys.Functions.min);
-            var top = p.all().map(function (x) { return _this._grid.top(x); }).foldr1(sys.Functions.min);
-            var right = p.all().map(function (x) { return _this._grid.right(x); }).foldr1(sys.Functions.max);
-            var bottom = p.all().map(function (x) { return _this._grid.bottom(x); }).foldr1(sys.Functions.max);
-            var selection = new Rect(new Point(left, top), new Point(right, bottom));
-            selection.all().foreach(function (p) {
-                _this._grid.get(p).classList.add("selected");
-            });
-            this._selection = selection;
+        if (arguments.length === 2) {
+            if (arguments[0] instanceof Point) {
+                var p1 = arguments[0];
+                var p2 = arguments[1];
+            }
+            else {
+                var p = new Point(arguments[0], arguments[1]);
+            }
         }
-        else if (p instanceof Point) {
-            this._grid.get(p).classList.add("selected");
+        else if (arguments.length === 4) {
+            var p1 = new Point(arguments[0], arguments[1]);
+            var p2 = new Point(arguments[2], arguments[3]);
+        }
+        else {
+            if (arguments[0] instanceof Point) {
+                var p = arguments[0];
+            }
+            else if (arguments[0] instanceof Rect) {
+                var p1 = arguments[0].p1;
+                var p2 = arguments[0].p2;
+            }
+            else {
+                throw "select(): invalid argument";
+            }
+        }
+        this.deselect();
+        if (p) {
+            if (p.x >= 0 && p.x < this._grid.width && p.y >= 0 && p.y < this._grid.height) {
+                this._selection = p;
+                this._grid.get(p).classList.add("selected");
+            }
+            else {
+                throw "select(): point out of bounds";
+            }
+        }
+        else if (p1) {
+            if (p1.x >= 0 && p1.x < this._grid.width && p1.y >= 0 && p1.y < this._grid.height && p2.x >= 0 && p2.x < this._grid.width && p2.y >= 0 && p2.y < this._grid.height) {
+                var rect = new Rect(p1, p2);
+                var left = rect.all().map(function (x) { return _this._grid.left(x); }).foldr1(sys.Functions.min);
+                var top = rect.all().map(function (x) { return _this._grid.top(x); }).foldr1(sys.Functions.min);
+                var right = rect.all().map(function (x) { return _this._grid.right(x); }).foldr1(sys.Functions.max);
+                var bottom = rect.all().map(function (x) { return _this._grid.bottom(x); }).foldr1(sys.Functions.max);
+                var selection = new Rect(new Point(left, top), new Point(right, bottom));
+                selection.all().foreach(function (p) {
+                    _this._grid.get(p).classList.add("selected");
+                });
+                this._selection = selection;
+            }
+            else {
+                throw "select(): rect out of bounds";
+            }
         }
     };
-    // public select(r : Rect) : void;
     Table.prototype.deselect = function () {
         if (!this.hasSelection) {
-            console.log("deselect: no selection.");
             return;
         }
         var selection = sys.ArrayList.fromNodeList(this._table.querySelectorAll(".selected"));
@@ -599,7 +633,7 @@ var Table = (function () {
     Table.prototype.mergeCells = function () {
         var _this = this;
         if (!this.hasSelection) {
-            console.log("mergeCells: no selection.");
+            throw "mergeCells(): nothing selected";
             return;
         }
         var selection = this._selection;
@@ -675,7 +709,7 @@ var Table = (function () {
     Table.prototype.splitCells = function () {
         var _this = this;
         if (!this.hasSelection) {
-            console.log("splitCells: no selection.");
+            throw "splitCells(): nothing selected.";
             return;
         }
         var selection = this._selection;
@@ -693,8 +727,7 @@ var Table = (function () {
     // inserts row/column before/after selection
     Table.prototype.insertRowAbove = function () {
         if (!this.hasSelection) {
-            console.log("insertRowAbove: no selection.");
-            return;
+            throw "insertRowAbove(): nothing selected.";
         }
         var selection = this._selection;
         var row;
@@ -721,16 +754,16 @@ var Table = (function () {
         if (selection instanceof Rect) {
             selection.p1.y++;
             selection.p2.y++;
+            this.select(selection);
         }
         else if (selection instanceof Point) {
             selection.y++;
+            this.select(selection);
         }
-        this.select(selection);
     };
     Table.prototype.insertRowBelow = function () {
         if (!this.hasSelection) {
-            console.log("insertRowBelow: no selection.");
-            return;
+            throw "insertRowBelow: nothing selected.";
         }
         var selection = this._selection;
         var row;
@@ -759,6 +792,9 @@ var Table = (function () {
     };
     Table.prototype.insertColumnBefore = function () {
         var _this = this;
+        if (!this.hasSelection) {
+            throw "insertColumnBefore: nothing selected.";
+        }
         var selection = this._selection;
         var column_to_duplicate;
         if (selection instanceof Point) {
@@ -799,6 +835,9 @@ var Table = (function () {
     };
     Table.prototype.insertColumnAfter = function () {
         var _this = this;
+        if (!this.hasSelection) {
+            throw "insertColumnAfter: nothing selected.";
+        }
         var selection = this._selection;
         var column_to_duplicate;
         if (selection instanceof Point) {
@@ -818,7 +857,6 @@ var Table = (function () {
         cellsA.removeDuplicates(Point.comparator());
         cellsB.removeDuplicates(Point.comparator());
         cellsC.removeDuplicates(Point.comparator());
-        // last edit
         // A: colspan 1 -> duplicate
         cellsA.foreach(function (p) {
             var cell = _this._grid.get(p);
@@ -857,11 +895,18 @@ var Table = (function () {
     Table.prototype.deleteRows = function () {
         var _this = this;
         if (!this.hasSelection) {
-            console.log("deleteRows: No selection.");
+            throw "deleteRows(): nothing selected.";
         }
         var selection = this._selection;
         if (selection instanceof Point) {
-            this.deleteRow(selection.y);
+            var cell = this._grid.get(selection);
+            if (cell.rowSpan !== 1) {
+                var range = sys.range(this._grid.top(selection), this._grid.bottom(selection));
+                range.foreach(function (i) { return _this.deleteRow(i); });
+            }
+            else {
+                this.deleteRow(selection.y);
+            }
         }
         else if (selection instanceof Rect) {
             var range = sys.range(selection.p1.y, selection.p2.y);
@@ -906,11 +951,18 @@ var Table = (function () {
     Table.prototype.deleteColumns = function () {
         var _this = this;
         if (!this.hasSelection) {
-            console.log("deleteColumns: No selection.");
+            throw "deleteColumns: nothing selected.";
         }
         var selection = this._selection;
         if (selection instanceof Point) {
-            this.deleteColumn(selection.x);
+            var cell = this._grid.get(selection);
+            if (cell.colSpan !== 1) {
+                var range = sys.range(this._grid.left(selection), this._grid.right(selection));
+                range.foreach(function (i) { return _this.deleteColumn(i); });
+            }
+            else {
+                this.deleteColumn(selection.x);
+            }
         }
         else if (selection instanceof Rect) {
             var range = sys.range(selection.p1.x, selection.p2.x);
@@ -960,7 +1012,12 @@ var Editor;
                 eval(editor.getValue());
             }
             catch (e) {
-                document.getElementById("errors").innerHTML = e.message;
+                if (typeof e === "string") {
+                    document.getElementById("errors").textContent = "Info: " + e;
+                }
+                else {
+                    document.getElementById("errors").innerHTML = "Bug: " + e.message;
+                }
             }
         });
     }
