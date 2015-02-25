@@ -30,16 +30,16 @@ module Editor {
 
 		document.getElementById("buttonExecute").addEventListener("click",
 			e => {
-				try {
+				// try {
 					document.getElementById("errors").innerHTML = "";
 					eval(editor.getValue());
-				} catch (e) {
-					if (typeof e === "string") {
-						document.getElementById("errors").textContent = "Info: " + e;
-					} else {
-						document.getElementById("errors").innerHTML = "Bug: " + e.message;
-					}
-				}
+				// } catch (e) {
+					// if (typeof e === "string") {
+						// document.getElementById("errors").textContent = "Info: " + e;
+					// } else {
+						// document.getElementById("errors").innerHTML = "Bug: " + e.message;
+					// }
+				// }
 			});
 
 

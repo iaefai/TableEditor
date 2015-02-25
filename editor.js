@@ -559,6 +559,18 @@ var Table = (function () {
         enumerable: true,
         configurable: true
     });
+    Table.prototype.reset = function (rows, cols) {
+        var parent = this._table.parentNode;
+        if (parent) {
+            parent.removeChild(this._table);
+        }
+        this._table = DOM.createTable(rows, cols);
+        this._table.id = "datatable";
+        if (parent) {
+            parent.appendChild(this._table);
+        }
+        this._grid = new TableGrid.Grid(this._table);
+    };
     Object.defineProperty(Table.prototype, "hasSelection", {
         get: function () {
             return this._selection !== null;
@@ -1016,6 +1028,43 @@ var Table = (function () {
             throw "setText(): point out of range.";
         }
     };
+    Table.prototype.getText = function (x, y) {
+        if (x >= 0 && x < this._grid.width && y >= 0 && y < this._grid.height) {
+            return this._grid.get(new Point(x, y)).textContent;
+        }
+        else {
+            throw "getText(): point out of range.";
+        }
+    };
+    // edit cell selected (invalid in multiselection)
+    // public edit() : void;
+    Table.prototype.exportData = function () {
+        var lines = new sys.ArrayList();
+        for (var row = 0; row < this._grid.height; ++row) {
+            var line = new sys.ArrayList();
+            for (var col = 0; col < this._grid.width; ++col) {
+                if (this._grid.isOriginal(new Point(col, row))) {
+                    line.append(this.getText(col, row));
+                }
+                else {
+                    line.append("");
+                }
+            }
+            lines.append(line);
+        }
+        return lines.map(function (line) { return line.foldr1(function (next, accum) { return accum + "\t" + next; }); }).foldr1(function (line, accum) { return accum + "\n" + line; });
+    };
+    Table.prototype.importData = function (data) {
+        // data is expected to be in a tab separated format so we will try to put it in an array
+        var lines = new sys.ArrayList(data.split(/[\n\r]+/));
+        var processed = lines.map(function (line) { return new sys.ArrayList(line.split(/[\t]/)); });
+        this.reset(processed.length, processed.get(0).length);
+        for (var row = 0; row < this._grid.height; ++row) {
+            for (var col = 0; col < this._grid.width; ++col) {
+                this.setText(col, row, processed.get(row).get(col));
+            }
+        }
+    };
     return Table;
 })();
 /// <reference path="utilities.ts"/>
@@ -1038,18 +1087,16 @@ var Editor;
             Editor.createTable(6, 6);
         });
         document.getElementById("buttonExecute").addEventListener("click", function (e) {
-            try {
-                document.getElementById("errors").innerHTML = "";
-                eval(editor.getValue());
-            }
-            catch (e) {
-                if (typeof e === "string") {
-                    document.getElementById("errors").textContent = "Info: " + e;
-                }
-                else {
-                    document.getElementById("errors").innerHTML = "Bug: " + e.message;
-                }
-            }
+            // try {
+            document.getElementById("errors").innerHTML = "";
+            eval(editor.getValue());
+            // } catch (e) {
+            // if (typeof e === "string") {
+            // document.getElementById("errors").textContent = "Info: " + e;
+            // } else {
+            // document.getElementById("errors").innerHTML = "Bug: " + e.message;
+            // }
+            // }
         });
     }
     Editor._start = _start;

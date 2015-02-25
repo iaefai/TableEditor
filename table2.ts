@@ -23,6 +23,23 @@ class Table {
         this._grid = new TableGrid.Grid(this._table);
 	}
 
+	private reset(rows : number, cols : number) {
+		var parent = this._table.parentNode;
+
+		if (parent) {
+			parent.removeChild(this._table);
+		}
+
+		this._table = DOM.createTable(rows, cols);
+		this._table.id = "datatable";
+
+		if (parent) {
+			parent.appendChild(this._table);
+		}
+
+		this._grid = new TableGrid.Grid(this._table);
+	}
+
 	public get hasSelection() : boolean {
 		return this._selection !== null;
 	}
@@ -594,12 +611,56 @@ class Table {
 		}
 	}
 
+	public getText(x : number, y : number) : string {
+		if (x >= 0 && x < this._grid.width &&
+			y >= 0 && y < this._grid.height) {
+			return this._grid.get(new Point(x, y)).textContent;
+		} else {
+			throw "getText(): point out of range.";
+		}
+	}
+
 	// edit cell selected (invalid in multiselection)
 	// public edit() : void;
 
-	// public clear() : void;
-	// public copy() : void;
-	// public paste() : void;
+	public exportData() : string {
+		var lines = new sys.ArrayList<sys.ArrayList<string>>();
+
+		for (var row = 0; row < this._grid.height; ++row) {
+			var line = new sys.ArrayList<string>();
+
+			for (var col = 0; col < this._grid.width; ++col) {
+				if (this._grid.isOriginal(new Point(col, row))) {
+					line.append(this.getText(col, row));
+				} else {
+					line.append("");
+				}				
+			}
+
+			lines.append(line);
+		}
+
+		return lines.map(line => line.foldr1((next, accum) => accum + "\t" + next))
+		     .foldr1((line, accum) => accum + "\n" + line);
+	}
+
+	public importData(data : String) : void {
+		// data is expected to be in a tab separated format so we will try to put it in an array
+
+		var lines = new sys.ArrayList<string>(data.split(/[\n\r]+/));
+		var processed = lines.map(line => new sys.ArrayList<string>(line.split(/[\t]/)));
+
+		this.reset(processed.length, processed.get(0).length);
+
+		for (var row = 0; row < this._grid.height; ++row) {
+			for (var col = 0; col < this._grid.width; ++col) {
+				this.setText(col, row, processed.get(row).get(col));
+			}
+		}
+	}
+
+
+
 
 
 
